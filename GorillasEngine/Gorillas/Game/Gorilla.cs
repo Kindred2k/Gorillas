@@ -1,16 +1,18 @@
-﻿using Silk.NET.OpenGL;
+﻿using Gorillas.Engine;
+using Silk.NET.OpenGL;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Text;
 using static System.Net.Mime.MediaTypeNames;
 using static System.Runtime.InteropServices.JavaScript.JSType;
-using Gorillas.Engine;
 
 namespace Gorillas.Game
 {
 	internal class Gorilla
 	{
 		private byte[] _pixelBuffer;
+		private Dictionary<int, int> Palettes = new Dictionary<int, int>();
 
 		// Constants
 		public const int SPEEDCONST = 500;
@@ -85,12 +87,13 @@ namespace Gorillas.Game
 		/// <param name="mouth">If true, draws a shocked "o" mouth; otherwise, draws a smile.</param>
 		public void DoSun(bool mouth)
 		{
-			// set position of sun
+			// Set position of sun
 			int x = ScrWidth / 2,
 				y = Scl(25);
 
-			// clear old sun
-			Draw.DrawFilledRectangleOnCpuBuffer(
+			// Clear old sun
+			// TODO: We will likely clear the entire framebuffer between frames instead of doing this
+			Draw.DrawFilledRectangle(
 				_pixelBuffer,
 				ScrWidth,
 				ScrHeight,
@@ -100,67 +103,77 @@ namespace Gorillas.Game
 				y + Scl(18),
 				0, 0, 0, 255);
 
-
-			// draw new sun:
+			// DRAW NEW SUN:
 
 			// body
+			Draw.DrawFilledCircle(
+				_pixelBuffer, // RGBA frame buffer
+				ScrWidth, ScrHeight, // Width & Height of frame buffer
+				x, y, // Position
+				Scl(12), // Radius
+				255, 255, 85, 255); // Yellow color
 
-			Circle(x, y), Scl(12), SUNATTR
+			// rays
+			Draw.DrawLine(_pixelBuffer, x - Scl(20), y, x + Scl(20), y, ScrWidth, ScrHeight, 255, 255, 85, 255);
+			Draw.DrawLine(_pixelBuffer, x, y - Scl(15), x, y + Scl(15), ScrWidth, ScrHeight, 255, 255, 85, 255);
+			Draw.DrawLine(_pixelBuffer, x - Scl(15), y - Scl(10), x + Scl(15), y + Scl(10), ScrWidth, ScrHeight, 255, 255, 85, 255);
+			Draw.DrawLine(_pixelBuffer, x - Scl(15), y + Scl(10), x + Scl(15), y - Scl(10), ScrWidth, ScrHeight, 255, 255, 85, 255);
+			Draw.DrawLine(_pixelBuffer, x - Scl(8), y - Scl(13), x + Scl(8), y + Scl(13), ScrWidth, ScrHeight, 255, 255, 85, 255);
+			Draw.DrawLine(_pixelBuffer, x - Scl(8), y + Scl(13), x + Scl(8), y - Scl(13), ScrWidth, ScrHeight, 255, 255, 85, 255);
+			Draw.DrawLine(_pixelBuffer, x - Scl(18), y - Scl(5), x + Scl(18), y + Scl(5), ScrWidth, ScrHeight, 255, 255, 85, 255);
+			Draw.DrawLine(_pixelBuffer, x - Scl(18), y + Scl(5), x + Scl(18), y - Scl(5), ScrWidth, ScrHeight, 255, 255, 85, 255);
 
-			Paint(x, y), SUNATTR
+			// mouth
+			if (mouth)
+			{
+				// draw "o" mouth
+				Draw.DrawFilledCircle(_pixelBuffer, ScrWidth, ScrHeight, x, y + Scl(5), Scl(2.9f), 0, 0, 0, 255);
+			}
+			else
+			{
+				// draw smile
+				Draw.DrawArc(_pixelBuffer, ScrWidth, ScrHeight, x, y, Scl(8), Convert.ToSingle(210 * pi / 180), Convert.ToSingle(330 * pi / 180), 0, 0, 0, 255);
+			}
 
-
-			'rays
-
-			Line(x - Scl(20), y) - (x + Scl(20), y), SUNATTR
-
-			Line(x, y - Scl(15)) - (x, y + Scl(15)), SUNATTR
-
-
-			Line(x - Scl(15), y - Scl(10)) - (x + Scl(15), y + Scl(10)), SUNATTR
-
-			Line(x - Scl(15), y + Scl(10)) - (x + Scl(15), y - Scl(10)), SUNATTR
-
-
-			Line(x - Scl(8), y - Scl(13)) - (x + Scl(8), y + Scl(13)), SUNATTR
-
-			Line(x - Scl(8), y + Scl(13)) - (x + Scl(8), y - Scl(13)), SUNATTR
-
-
-			Line(x - Scl(18), y - Scl(5)) - (x + Scl(18), y + Scl(5)), SUNATTR
-
-			Line(x - Scl(18), y + Scl(5)) - (x + Scl(18), y - Scl(5)), SUNATTR
-
-
-			'mouth
-
-			If Mouth Then 'draw "o" mouth
-
-				Circle(x, y + Scl(5)), Scl(2.9), 0
-
-				Paint(x, y + Scl(5)), 0, 0
-
-			Else 'draw smile
-
-				Circle(x, y), Scl(8), 0, (210 * pi# / 180), (330 * pi# / 180)
-			End If
-
-
-			'eyes
-
-			Circle(x - 3, y - 2), 1, 0
-
-			Circle(x + 3, y - 2), 1, 0
-
-			PSet(x - 3, y - 2), 0
-
-			PSet(x + 3, y - 2), 0
-
+			// eyes
+			Draw.DrawFilledCircle(_pixelBuffer, ScrWidth, ScrHeight, x - 3, y - 2, 1, 0, 0, 0, 255);
+			Draw.DrawFilledCircle(_pixelBuffer, ScrWidth, ScrHeight, x + 3, y - 2, 1, 0, 0, 0, 255);
+			Draw.DrawPixel(_pixelBuffer, x - 3, y - 2, ScrWidth, ScrHeight, 0, 0, 0, 255);
+			Draw.DrawPixel(_pixelBuffer, x + 3, y - 2, ScrWidth, ScrHeight, 0, 0, 0, 255);
 		}
 
+		/// <summary>
+		/// Sets the screen colors and palettes based on the current mode. If the mode is 9, it sets specific colors for explosion, background, and various palette entries. Otherwise, it sets a blank screen with a black background.
+		/// </summary>
+		public void SetScreen()
+		{
+			if (Mode == 9)
+			{
+				this.ExplosionColor = 2;
+				this.BackColor = 1;
+				Palettes.Add(0, 1);
+				Palettes.Add(1, 46);
+				Palettes.Add(2, 44);
+				Palettes.Add(3, 54);
+				Palettes.Add(5, 7);
+				Palettes.Add(6, 4);
+				Palettes.Add(7, 3);
 
-		DECLARE SUB SetScreen()
-DECLARE SUB EndGame()
+				// Display Color
+				// TODO: Determine what "Display Color" means in this context. It may refer to setting the color palette for the display, but without more information, it's unclear.
+				Palettes.Add(9, 63);
+			}
+			else
+			{
+				this.ExplosionColor = 2;
+				this.BackColor = 0;
+
+				// Blank screen
+				Draw.FillBuffer(_pixelBuffer, 0, 0, 0, 255);
+			}
+		}
+
+		DECLARE SUB EndGame()
 DECLARE SUB Center(Row, Text$)
 DECLARE SUB Intro()
 DECLARE SUB SparklePause()
@@ -177,6 +190,11 @@ DECLARE SUB VictoryDance (Player)
 DECLARE SUB ClearGorillas ()
 DECLARE SUB DrawBan (xc#, yc#, r, bc)
 
+		/// <summary>
+		/// Scales the given float value to an integer based on the current screen mode.
+		/// </summary>
+		/// <param name="n">The float value to scale.</param>
+		/// <returns>The scaled integer value.</returns>
 		private int Scl (float n)
 		{
 			if (n != Convert.ToInt32(n))
