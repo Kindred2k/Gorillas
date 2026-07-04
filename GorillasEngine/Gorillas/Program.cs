@@ -8,13 +8,13 @@ namespace PixelRenderer
 	class Program
 	{
 		// Internal state
-		private static IWindow window;
-		private static GL gl;
+		private static IWindow? window;
+		private static GL? gl;
 
 		// Canvas specifications
 		private const int Width = 320;
 		private const int Height = 240;
-		private static uint[] pixelBuffer;
+		private static uint[]? pixelBuffer;
 
 		// OpenGL Objects
 		private static uint textureId;
@@ -24,7 +24,7 @@ namespace PixelRenderer
 		{
 			// Configure the cross-platform window properties
 			var options = WindowOptions.Default;
-			options.Size = new Vector2D<int>(320, 200); // Window size (4x upscale)
+			options.Size = new Vector2D<int>(320, 240); // Window size (4x upscale)
 			options.Title = "Silk.NET High-Performance Pixel Renderer";
 			options.VSync = true;
 
@@ -75,6 +75,9 @@ namespace PixelRenderer
 
 		private static void OnUpdate(double deltaTime)
 		{
+			if (pixelBuffer == null)
+				throw new InvalidOperationException("Pixel buffer is not initialized.");
+
 			// SAFE: Normal managed array access remains identical
 			Random rand = Random.Shared;
 
@@ -94,10 +97,13 @@ namespace PixelRenderer
 
 		private static void OnRender(double deltaTime)
 		{
+			if (gl == null || window == null)
+				throw new InvalidOperationException("OpenGL context or window is not initialized.");
+
 			gl.Clear((uint)ClearBufferMask.ColorBufferBit);
 			gl.BindTexture(TextureTarget.Texture2D, textureId);
 
-			// SAFE: Pass the raw array directly. 
+			// SAFE: Pass the raw array directly.
 			// Silk.NET automatically pins the managed memory during the driver upload call.
 			gl.TexSubImage2D(
 				TextureTarget.Texture2D,
@@ -125,6 +131,9 @@ namespace PixelRenderer
 		}
 		private static void OnUnload()
 		{
+			if (gl == null)
+				return;
+
 			// Clean up native graphics context resources safely
 			gl.DeleteTexture(textureId);
 			gl.DeleteFramebuffer(fboId);
