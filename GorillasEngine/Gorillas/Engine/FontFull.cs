@@ -1,3 +1,4 @@
+/*
 using System;
 using System.IO;
 using Silk.NET.OpenGL;
@@ -20,7 +21,7 @@ namespace RetroTextRenderer
         private static uint textureId;
 
         // Font Configuration
-        private const string FontPath = "Px437_IBM_VGA_SquarePx.ttf";
+        private const string FontPath = "Px437_IBM_VGA_8x16.ttf";
         private const float FontSize = 16f; // Match the native font size (usually 8, 14, or 16)
         private static StbTrueType.stbtt_fontinfo fontInfo;
         private static byte[] fontBuffer;
@@ -153,3 +154,4 @@ namespace RetroTextRenderer
         }
     }
 }
+*/

@@ -1,4 +1,5 @@
 ﻿using System;
+using Gorillas.Engine;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using Silk.NET.Windowing;
@@ -10,11 +11,12 @@ namespace PixelRenderer
 		// Internal state
 		private static IWindow? window;
 		private static GL? gl;
+		private static FontRenderer? fontRenderer;
 
 		// Canvas specifications
 		private const int Width = 320;
 		private const int Height = 240;
-		private static uint[]? pixelBuffer;
+		private static byte[]? pixelBuffer;
 
 		// OpenGL Objects
 		private static uint textureId;
@@ -42,7 +44,7 @@ namespace PixelRenderer
 		private static void OnLoad()
 		{
 			gl = GL.GetApi(window);
-			pixelBuffer = new uint[Width * Height];
+			pixelBuffer = new byte[Width * Height * 4]; // 4 bytes per pixel (RGBA)
 
 			textureId = gl.GenTexture();
 			gl.BindTexture(TextureTarget.Texture2D, textureId);
@@ -71,12 +73,17 @@ namespace PixelRenderer
 
 			gl.BindFramebuffer(FramebufferTarget.ReadFramebuffer, 0);
 			gl.BindTexture(TextureTarget.Texture2D, 0);
+
+			fontRenderer = new FontRenderer(gl, pixelBuffer, Width, Height, "Px437_IBM_VGA_8x16.ttf");
 		}
 
 		private static void OnUpdate(double deltaTime)
 		{
 			if (pixelBuffer == null)
 				throw new InvalidOperationException("Pixel buffer is not initialized.");
+
+			if (fontRenderer == null)
+				throw new InvalidOperationException("Font renderer is not initialized.");
 
 			// SAFE: Normal managed array access remains identical
 			Random rand = Random.Shared;
@@ -90,9 +97,14 @@ namespace PixelRenderer
 					byte b = (byte)(y * 255 / Height);
 					byte a = 255;
 
-					pixelBuffer[y * Width + x] = (uint)(r | (g << 8) | (b << 16) | (a << 24));
+					pixelBuffer[(y * Width + x) * 4 + 0] = r;
+					pixelBuffer[(y * Width + x) * 4 + 1] = g;
+					pixelBuffer[(y * Width + x) * 4 + 2] = b;
+					pixelBuffer[(y * Width + x) * 4 + 3] = a;
 				}
 			}
+
+			fontRenderer.RenderText("HELLO WORLD!", 10, 20, 255, 255, 255);
 		}
 
 		private static void OnRender(double deltaTime)
@@ -129,6 +141,7 @@ namespace PixelRenderer
 			gl.BindFramebuffer(FramebufferTarget.ReadFramebuffer, 0);
 			gl.BindTexture(TextureTarget.Texture2D, 0);
 		}
+
 		private static void OnUnload()
 		{
 			if (gl == null)

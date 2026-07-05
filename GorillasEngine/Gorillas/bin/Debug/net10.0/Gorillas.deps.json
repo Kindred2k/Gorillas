@@ -8,7 +8,8 @@
     ".NETCoreApp,Version=v10.0": {
       "Gorillas/1.0.0": {
         "dependencies": {
-          "Silk.NET": "2.23.0"
+          "Silk.NET": "2.23.0",
+          "StbTrueTypeSharp": "1.26.12"
         },
         "runtime": {
           "Gorillas.dll": {}
@@ -172,6 +173,14 @@
           }
         }
       },
+      "StbTrueTypeSharp/1.26.12": {
+        "runtime": {
+          "lib/netstandard2.0/StbTrueTypeSharp.dll": {
+            "assemblyVersion": "1.26.12.0",
+            "fileVersion": "1.26.12.0"
+          }
+        }
+      },
       "Ultz.Native.GLFW/3.4.0": {
         "runtimeTargets": {
           "runtimes/linux-arm/native/libglfw.so.3": {
@@ -328,6 +337,13 @@
       "sha512": "sha512-aYBudKmENmvLRn9p15HbdvlQTnnXskcDfTfbYwSb/4fr263rGLwYuDw/txUEc2jihHJiWCp5+75Y7z5wTJWl7g==",
       "path": "silk.net.windowing.glfw/2.23.0",
       "hashPath": "silk.net.windowing.glfw.2.23.0.nupkg.sha512"
+    },
+    "StbTrueTypeSharp/1.26.12": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-hCc6/OsfcPa5VsLECcEU2m78WOshBrKwK42nAodSm9Z5wH68f7n66SoiRLCdGCkDaqbWz2TlX4zYHIjogj1HJA==",
+      "path": "stbtruetypesharp/1.26.12",
+      "hashPath": "stbtruetypesharp.1.26.12.nupkg.sha512"
     },
     "Ultz.Native.GLFW/3.4.0": {
       "type": "package",

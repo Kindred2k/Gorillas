@@ -173,22 +173,42 @@ namespace Gorillas.Game
 			}
 		}
 
+		/// <summary>
+		/// Centers the given text on the specified row of the screen. The text is printed starting from a calculated column position that centers it horizontally.
+		/// </summary>
+		/// <param name="row"></param>
+		/// <param name="text"></param>
+		private void Center(int row, string text)
+		{
+			int Col = MaxCol / 2;
+			//LOCATE Row, Col - (LEN(Text$) / 2 + .5)
+			//PRINT Text$;
+		}
+
+		/*
 		DECLARE SUB EndGame()
-DECLARE SUB Center(Row, Text$)
-DECLARE SUB Intro()
-DECLARE SUB SparklePause()
-DECLARE SUB GetInputs(Player1$, Player2$, NumGames)
-DECLARE SUB PlayGame(Player1$, Player2$, NumGames)
-DECLARE SUB DoExplosion(x#, y#)
-DECLARE SUB MakeCityScape (BCoor() AS ANY)
-DECLARE SUB PlaceGorillas(BCoor() AS ANY)
-DECLARE SUB UpdateScores(Record(), PlayerNum, Results)
-DECLARE SUB DrawGorilla(x, y, arms)
-DECLARE SUB GorillaIntro(Player1$, Player2$)
-DECLARE SUB Rest(t#)
-DECLARE SUB VictoryDance (Player)
-DECLARE SUB ClearGorillas ()
-DECLARE SUB DrawBan (xc#, yc#, r, bc)
+		DECLARE SUB Center(Row, Text$)
+		DECLARE SUB Intro()
+		DECLARE SUB SparklePause()
+		DECLARE SUB GetInputs(Player1$, Player2$, NumGames)
+		DECLARE SUB PlayGame(Player1$, Player2$, NumGames)
+		DECLARE SUB DoExplosion(x#, y#)
+		DECLARE SUB MakeCityScape (BCoor() AS ANY)
+		DECLARE SUB PlaceGorillas(BCoor() AS ANY)
+		DECLARE SUB UpdateScores(Record(), PlayerNum, Results)
+		DECLARE SUB DrawGorilla(x, y, arms)
+		DECLARE SUB GorillaIntro(Player1$, Player2$)
+		DECLARE SUB Rest(t#)
+		DECLARE SUB VictoryDance (Player)
+		DECLARE SUB ClearGorillas ()
+		DECLARE SUB DrawBan (xc#, yc#, r, bc)
+		DECLARE FUNCTION GetNum# (Row, Col)
+		DECLARE FUNCTION DoShot(PlayerNum, x, y)
+		DECLARE FUNCTION ExplodeGorilla(x#, y#)
+		DECLARE FUNCTION Getn# (Row, Col)
+		DECLARE FUNCTION PlotShot (StartX, StartY, Angle#, Velocity, PlayerNum)
+		DECLARE FUNCTION CalcDelay! ()
+		*/
 
 		/// <summary>
 		/// Scales the given float value to an integer based on the current screen mode.
@@ -208,15 +228,6 @@ DECLARE SUB DrawBan (xc#, yc#, r, bc)
 			else
 				return Convert.ToInt32(n);
 		}
-
-		DECLARE FUNCTION GetNum# (Row, Col)
-DECLARE FUNCTION DoShot(PlayerNum, x, y)
-DECLARE FUNCTION ExplodeGorilla(x#, y#)
-DECLARE FUNCTION Getn# (Row, Col)
-DECLARE FUNCTION PlotShot (StartX, StartY, Angle#, Velocity, PlayerNum)
-DECLARE FUNCTION CalcDelay! ()
-
-
 
 		private int FnRan(int x)
 		{
