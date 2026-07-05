@@ -14,6 +14,7 @@ namespace Gorillas.Engine
         private readonly byte[] _pixelBuffer;
         private readonly uint _textureId;
         private readonly StbTrueType.stbtt_fontinfo _fontInfo;
+        private readonly GCHandle _fontBufferHandle; // Keep font data alive
         private bool _disposed;
 
 		/// <summary>
@@ -38,27 +39,24 @@ namespace Gorillas.Engine
             string fontPath = ResolveFontPath(fontFileName ?? _defaultFontFileName);
             byte[] fontBuffer = File.ReadAllBytes(fontPath);
 
-            _fontInfo = StbTrueType.CreateFont(fontBuffer, 0);
-            if (_fontInfo == null)
-            {
-                throw new InvalidOperationException("Failed to initialize the requested TrueType font.");
-            }
+            _fontInfo = new StbTrueType.stbtt_fontinfo();
 
-			// Create an unsafe pointer to the font buffer for stb_truetype initialization
-            byte* unmanagedBuffer = (byte*)Marshal.AllocHGlobal(fontBuffer.Length);
+            // Pin the font buffer to keep it alive for the lifetime of this renderer
+            _fontBufferHandle = GCHandle.Alloc(fontBuffer, GCHandleType.Pinned);
+
             try
             {
-                Marshal.Copy(fontBuffer, 0, (IntPtr)unmanagedBuffer, fontBuffer.Length);
-                int success = StbTrueType.stbtt_InitFont(_fontInfo, unmanagedBuffer, 0);
+                IntPtr fontPtr = _fontBufferHandle.AddrOfPinnedObject();
+                int success = StbTrueType.stbtt_InitFont(_fontInfo, (byte*)fontPtr, 0);
                 if (success == 0)
                 {
                     throw new InvalidOperationException("Failed to initialize the requested TrueType font.");
                 }
             }
-            finally
+            catch
             {
-				// Free the unmanaged memory allocated for the font buffer
-                Marshal.FreeHGlobal((IntPtr)unmanagedBuffer);
+                _fontBufferHandle.Free();
+                throw;
             }
 
             _textureId = _gl.GenTexture();
@@ -79,15 +77,6 @@ namespace Gorillas.Engine
                 PixelFormat.Rgba,
                 PixelType.UnsignedByte,
                 ReadOnlySpan<byte>.Empty);
-
-            /*
-             * Test Rendering
-             *
-            Clear();
-            RenderText("HELLO WORLD!", 10, 20, 255, 255, 255);
-            RenderText("DOS MODE EN-CA READY.", 10, 40, 0, 255, 0);
-            UploadTexture();
-            */
         }
 
         public int BufferWidth => _bufferWidth;
@@ -142,6 +131,13 @@ namespace Gorillas.Engine
             }
 
             _gl.DeleteTexture(_textureId);
+
+            // Release the pinned font buffer
+            if (_fontBufferHandle.IsAllocated)
+            {
+                _fontBufferHandle.Free();
+            }
+
             _disposed = true;
         }
 

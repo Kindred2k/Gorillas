@@ -11,6 +11,8 @@ namespace Gorillas.Game
 {
 	internal class Gorilla
 	{
+		private QBasic _qBasic;
+
 		private byte[] _pixelBuffer;
 		private Dictionary<int, int> Palettes = new Dictionary<int, int>();
 
@@ -64,9 +66,10 @@ namespace Gorillas.Game
 		/// <param name="scrWidth"></param>
 		/// <param name="scrHeight"></param>
 		/// <param name="mode"></param>
-		public Gorilla(byte[] pixelBuffer, int scrWidth, int scrHeight, int mode)
+		public Gorilla(byte[] pixelBuffer, int scrWidth, int scrHeight, int mode, QBasic qBasic)
 		{
 			this._pixelBuffer = pixelBuffer;
+			this._qBasic = qBasic;
 			ScrWidth = scrWidth;
 			ScrHeight = scrHeight;
 			Mode = mode;
@@ -178,16 +181,51 @@ namespace Gorillas.Game
 		/// </summary>
 		/// <param name="row"></param>
 		/// <param name="text"></param>
-		private void Center(int row, string text)
+		private void CENTER(int row, string text)
 		{
 			int Col = MaxCol / 2;
-			//LOCATE Row, Col - (LEN(Text$) / 2 + .5)
-			//PRINT Text$;
+			_qBasic.LOCATE(row, Convert.ToInt32(Col - (text.Length / 2 + 0.5)));
+			_qBasic.PRINT(text);
 		}
 
+		[Obsolete("This method was never implemented by Microsoft in GORILLA.BAS.")]
+		public void ENDGAME()
+		{
+		}
+
+		/// <summary>
+		/// Displays the game introduction, including the title, copyright information, and instructions for the player. It also plays a short sound sequence and waits for user input before proceeding. The screen is cleared and set to the appropriate mode and colors.
+		/// </summary>
+		private void Intro()
+		{
+			/*
+			SCREEN 0
+			WIDTH 80, 25
+			MaxCol = 80
+			COLOR 15, 0
+			CLS
+			*/
+
+			CENTER(4, "Q B a s i c    G O R I L L A S");
+
+			_qBasic.COLOR(7);
+			CENTER(6, "Copyright (C) Microsoft Corporation 1990");
+			CENTER(8, "Your mission is to hit your opponent with the exploding");
+			CENTER(9, "banana by varying the angle and power of your throw, taking");
+			CENTER(10, "into account wind speed, gravity, and the city skyline.");
+			CENTER(11, "The wind speed is shown by a directional arrow at the bottom");
+			CENTER(12, "of the playing field, its length relative to its strength.");
+			CENTER(24, "Press any key to continue");
+
+			/*
+			PLAY "MBT160O1L8CDEDCDL4ECC"
+			SparklePause
+			IF Mode = 1 THEN MaxCol = 40
+			*/
+		}
+
+
 		/*
-		DECLARE SUB EndGame()
-		DECLARE SUB Center(Row, Text$)
 		DECLARE SUB Intro()
 		DECLARE SUB SparklePause()
 		DECLARE SUB GetInputs(Player1$, Player2$, NumGames)
