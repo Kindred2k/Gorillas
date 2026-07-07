@@ -15,8 +15,8 @@ namespace PixelRenderer
 		private static QBasic? _qBasic;
 
 		// Canvas specifications
-		private const int _screenWidth = 320;
-		private const int _screenHeight = 240;
+		private const int _screenWidth = 640;
+		private const int _screenHeight = 350;
 		private static byte[]? _pixelBuffer;
 
 		// Tests
@@ -64,7 +64,7 @@ namespace PixelRenderer
 			}
 			_pixelBuffer = new byte[_screenWidth * _screenHeight * 4]; // 4 bytes per pixel (RGBA)
 
-			_fontRenderer = new FontRenderer(_gl, _pixelBuffer, _screenWidth, _screenHeight, "Px437_IBM_VGA_8x16.ttf");
+			_fontRenderer = new FontRenderer(_gl, _pixelBuffer, _screenWidth, _screenHeight, "Px437_IBM_EGA_8x14.ttf");
 			_qBasic = new QBasic(_pixelBuffer, _screenWidth, _screenHeight, _fontRenderer);
 
 			textureId = _fontRenderer.TextureId;
@@ -101,6 +101,9 @@ namespace PixelRenderer
 
 			if (_fontRenderer == null)
 				throw new InvalidOperationException("Font renderer is not initialized.");
+
+			if (_qBasic == null)
+				throw new InvalidOperationException("QBasic instance is not initialized.");
 
 			// SAFE: Normal managed array access remains identical
 			Random rand = Random.Shared;
@@ -155,10 +158,27 @@ namespace PixelRenderer
 			if (yCounter < 1)
 				yDirection = 1;
 
-			_fontRenderer.RenderText("HELLO, CLARA!", 10, 20, 255, 255, 255);
-			_fontRenderer.RenderText("This text is RED.", 10, 40, 255, 0, 0);
-			_fontRenderer.RenderText("This text is GREEN.", 10, 60, 0, 255, 0);
-			_fontRenderer.RenderText("This text is BLUE.", 10, 80, 0, 0, 255);
+			_qBasic.COLOR(15);
+			_qBasic.LOCATE(1, 1);
+			_qBasic.PRINT("1,1");
+			_qBasic.LOCATE(76, 1);
+			_qBasic.PRINT("80,1");
+			_qBasic.LOCATE(1, 25);
+			_qBasic.PRINT("1,25");
+			_qBasic.LOCATE(75, 25);
+			_qBasic.PRINT("80,25");
+
+			// _fontRenderer.RenderText("HELLO, CLARA!", 10, 20, 255, 255, 255);
+			// _fontRenderer.RenderText("This text is RED.", 10, 40, 255, 0, 0);
+			// _fontRenderer.RenderText("This text is GREEN.", 10, 60, 0, 255, 0);
+			// _fontRenderer.RenderText("This text is BLUE.", 10, 80, 0, 0, 255);
+
+			for (int i = 1; i < 16; i++)
+			{
+				_qBasic.COLOR(i);
+				_qBasic.LOCATE(1, i+2);
+				_qBasic.PRINT($"Color {i}");
+			}
 		}
 
 

@@ -224,6 +224,65 @@ namespace Gorillas.Game
 			*/
 		}
 
+		public void DrawGorilla(int x, int y, int arms)
+		{
+			// draw head
+			_qBasic.LINE(x - Scl(4), y, x + Scl(2.9f), y + Scl(6), OBJECTCOLOR, QBasic.LineBoxStyle.BF);
+			_qBasic.LINE(x - Scl(5), y + Scl(2), x + Scl(4), y + Scl(4), OBJECTCOLOR, QBasic.LineBoxStyle.BF);
+
+			// draw eyes/brow
+			_qBasic.LINE(x - Scl(3), y + Scl(2), x + Scl(2), y + Scl(2), 0, QBasic.LineBoxStyle.BF);
+
+			// draw nose if ega
+			if (Mode == 9)
+			{
+				for (int i = -2; i <= -1; i++)
+				{
+					_qBasic.PSET(x + i, y + 4, 0);
+					_qBasic.PSET(x + i + 3, y + 4, 0);
+				}
+			}
+
+			// neck
+			_qBasic.LINE(x - Scl(3), y + Scl(7), x + Scl(2), y + Scl(7), OBJECTCOLOR);
+
+			// body
+			_qBasic.LINE(x - Scl(8), y + Scl(8), x + Scl(6.9f), y + Scl(14), OBJECTCOLOR, QBasic.LineBoxStyle.BF);
+			_qBasic.LINE(x - Scl(6), y + Scl(15), x + Scl(4.9f), y + Scl(20), OBJECTCOLOR, QBasic.LineBoxStyle.BF);
+
+			// legs
+			for (int i = 0; i <= 4; i++)
+			{
+				_qBasic.CIRCLE(x + Scl(i), y + Scl(25), Scl(10), OBJECTCOLOR, 3 * pi / 4, 9 * pi / 8);
+				_qBasic.CIRCLE(x + Scl(-6) + Scl(i - .1f), y + Scl(25), Scl(10), OBJECTCOLOR, 15 * pi / 8, pi / 4);
+			}
+			NEXT
+
+			// 'chest
+			// CIRCLE (x - Scl(4.9), y + Scl(10)), Scl(4.9), 0, 3 * pi# / 2, 0
+			// CIRCLE (x + Scl(4.9), y + Scl(10)), Scl(4.9), 0, pi#, 3 * pi# / 2
+
+			// FOR i = -5 TO -1
+			// 	SELECT CASE arms
+			// 	CASE 1
+			// 		'Right arm up
+			// 		CIRCLE (x + Scl(i - .1), y + Scl(14)), Scl(9), OBJECTCOLOR, 3 * pi# / 4, 5 * pi# / 4
+			// 		CIRCLE (x + Scl(4.9) + Scl(i), y + Scl(4)), Scl(9), OBJECTCOLOR, 7 * pi# / 4, pi# / 4
+			// 		GET (x - Scl(15), y - Scl(1))-(x + Scl(14), y + Scl(28)), GorR&
+			// 	CASE 2
+			// 		'Left arm up
+			// 		CIRCLE (x + Scl(i - .1), y + Scl(4)), Scl(9), OBJECTCOLOR, 3 * pi# / 4, 5 * pi# / 4
+			// 		CIRCLE (x + Scl(4.9) + Scl(i), y + Scl(14)), Scl(9), OBJECTCOLOR, 7 * pi# / 4, pi# / 4
+			// 		GET (x - Scl(15), y - Scl(1))-(x + Scl(14), y + Scl(28)), GorL&
+			// 	CASE 3
+			// 		'Both arms down
+			// 		CIRCLE (x + Scl(i - .1), y + Scl(14)), Scl(9), OBJECTCOLOR, 3 * pi# / 4, 5 * pi# / 4
+			// 		CIRCLE (x + Scl(4.9) + Scl(i), y + Scl(14)), Scl(9), OBJECTCOLOR, 7 * pi# / 4, pi# / 4
+			// 		GET (x - Scl(15), y - Scl(1))-(x + Scl(14), y + Scl(28)), GorD&
+			// 	END SELECT
+			// NEXT i
+		}
+
 
 		/*
 		DECLARE SUB Intro()

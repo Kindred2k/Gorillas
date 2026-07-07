@@ -8,7 +8,7 @@ public class QBasic
 	private int _locateY = 0;
 
 	private int _charWidth = 8;
-	private int _charHeight = 16;
+	private int _charHeight = 14;
 	private byte[] _pixelBuffer;
 	private int _bufferWidth;
 	private int _bufferHeight;
@@ -40,11 +40,23 @@ public class QBasic
 	/// <summary>
 	/// A dictionary that maps the current palette indices to their corresponding color values. This allows for dynamic color changes in the QBasic environment, enabling the use of different color schemes during gameplay or other visual effects.
 	/// </summary>
-	private Dictionary<int, int> CurrentPalettes = new Dictionary<int, int>
+	private Dictionary<int, int> CurrentPalette = new Dictionary<int, int>
 	{
 		{0 , 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}, {7, 7},
 		{8, 8}, {9, 9}, {10, 10}, {11, 11}, {12, 12}, {13, 13}, {14, 14}, {15, 15}
 	};
+
+	public enum LineBoxStyle
+	{
+		// Draw a line
+		None = 0,
+
+		// Draw a box
+		B = 1,
+
+		// Draw a filled box
+		BF = 2
+	}
 
 	public QBasic(byte[] pixelBuffer, int bufferWidth, int bufferHeight, FontRenderer fontRenderer)
 	{
@@ -66,6 +78,35 @@ public class QBasic
 		_color = color;
 	}
 
+	public void LINE(int x1, int y1, int x2, int y2, int color, LineBoxStyle style = LineBoxStyle.None)
+	{
+		byte r = ColorMap[CurrentPalette[_color]].r;
+		byte g = ColorMap[CurrentPalette[_color]].g;
+		byte b = ColorMap[CurrentPalette[_color]].b;
+		byte a = 255;
+
+		switch (style)
+		{
+			case LineBoxStyle.None:
+				Draw.DrawLine(_pixelBuffer, _bufferWidth, _bufferHeight, x1, y1, x2, y2, r, g, b, a);
+				break;
+			case LineBoxStyle.B:
+				// Draw the box outline
+				Draw.DrawLine(_pixelBuffer, _bufferWidth, _bufferHeight, x1, y1, x2, y1, r, g, b, a); // Top
+				Draw.DrawLine(_pixelBuffer, _bufferWidth, _bufferHeight, x1, y2, x2, y2, r, g, b, a); // Bottom
+				Draw.DrawLine(_pixelBuffer, _bufferWidth, _bufferHeight, x1, y1, x1, y2, r, g, b, a); // Left
+				Draw.DrawLine(_pixelBuffer, _bufferWidth, _bufferHeight, x2, y1, x2, y2, r, g, b, a); // Right
+				break;
+			case LineBoxStyle.BF:
+				// Draw filled box
+				for (int y = y1; y <= y2; y++)
+				{
+					Draw.DrawLine(_pixelBuffer, _bufferWidth, _bufferHeight, x1, y, x2, y, r, g, b, a);
+				}
+				break;
+		}
+	}
+
 	public void LOCATE(int row, int col)
 	{
 		_locateX = col;
@@ -74,6 +115,21 @@ public class QBasic
 
 	public void PRINT(string text)
 	{
-		_fontRenderer.RenderText(text, _locateX, _locateY, 255, 255, 255);
+		byte r = ColorMap[CurrentPalette[_color]].r;
+		byte g = ColorMap[CurrentPalette[_color]].g;
+		byte b = ColorMap[CurrentPalette[_color]].b;
+
+		Tuple<int, int> pixelCoords = TranslateRowColToPixel(_locateX, _locateY);
+		_fontRenderer.RenderText(text, pixelCoords.Item1, pixelCoords.Item2, r, g, b);
+	}
+
+	public void PSET(int x, int y, int color)
+	{
+		byte r = ColorMap[CurrentPalette[color]].r;
+		byte g = ColorMap[CurrentPalette[color]].g;
+		byte b = ColorMap[CurrentPalette[color]].b;
+		byte a = 255;
+
+		Draw.DrawPixel(_pixelBuffer, x, y, _bufferWidth, _bufferHeight, r, g, b, a);
 	}
 }

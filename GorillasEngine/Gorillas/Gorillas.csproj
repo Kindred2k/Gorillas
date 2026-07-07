@@ -14,12 +14,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\Px437_IBM_VGA_8x16.ttf">
-      <Link>Px437_IBM_VGA_8x16.ttf</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\Px437_IBM_VGA_8x16.ttf">
-      <Link>Px437_IBM_VGA_SquarePx.ttf</Link>
+    <None Include="..\..\Px437_IBM_EGA_8x14.ttf">
+      <Link>Px437_IBM_EGA_8x14.ttf</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
