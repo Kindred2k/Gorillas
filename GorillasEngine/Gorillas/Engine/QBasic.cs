@@ -40,6 +40,7 @@ public class QBasic
 	/// <summary>
 	/// A dictionary that maps the current palette indices to their corresponding color values. This allows for dynamic color changes in the QBasic environment, enabling the use of different color schemes during gameplay or other visual effects.
 	/// </summary>
+	/// <remarks>It would be beneficial to convert all colors to a uint32 so that less lookups are being performed.</remarks>
 	private Dictionary<int, int> CurrentPalette = new Dictionary<int, int>
 	{
 		{0 , 0}, {1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}, {7, 7},
@@ -73,13 +74,43 @@ public class QBasic
 		return new Tuple<int, int>(pixelX, pixelY);
 	}
 
+	public void CIRCLE(bool step, int x, int y, int radius, int? color = null, float? start = null, float? end = null, float? aspect = null)
+	{
+		int drawColor = color ?? _color;
+
+		if (start != null && end != null && aspect != null)
+		{
+			Draw.DrawQBasicCircle(_pixelBuffer, _bufferWidth, _bufferHeight, step, x, y, radius, drawColor, start.Value, end.Value, aspect.Value);
+		}
+		else
+		{
+			Draw.DrawCircleOutline(_pixelBuffer, _bufferWidth, _bufferHeight, x, y, radius, ColorMap[CurrentPalette[drawColor]].r, ColorMap[CurrentPalette[drawColor]].g, ColorMap[CurrentPalette[drawColor]].b, 255);
+		}
+	}
+
 	public void COLOR(int color)
 	{
 		_color = color;
 	}
 
-	public void LINE(int x1, int y1, int x2, int y2, int color, LineBoxStyle style = LineBoxStyle.None)
+	// <summary>
+	/// /// Draws a line or box on the pixel buffer based on the specified coordinates, color, and style. The method supports three styles: None (draws a simple line), B (draws a box outline), and BF (draws a filled box). The method uses the current palette to determine the color to be used for drawing.
+	/// </summary>
+	/// <param name="x1"></param>
+	/// <param name="y1"></param>
+	/// <param name="x2"></param>
+	/// <param name="y2"></param>
+	/// <param name="color"></param>
+	/// <param name="style"></param>
+	/// <param name="pixelBuffer">Optional destination pixel buffer</param>
+	/// <param name="bufferWidth"></param>
+	/// <param name="bufferHeight"></param>
+	public void LINE(int x1, int y1, int x2, int y2, int color, LineBoxStyle style = LineBoxStyle.None, byte[]? pixelBuffer = null, int? bufferWidth = null, int? bufferHeight = null)
 	{
+		byte[] buffer = pixelBuffer ?? _pixelBuffer;
+		int width = bufferWidth ?? _bufferWidth;
+		int height = bufferHeight ?? _bufferHeight;
+
 		byte r = ColorMap[CurrentPalette[_color]].r;
 		byte g = ColorMap[CurrentPalette[_color]].g;
 		byte b = ColorMap[CurrentPalette[_color]].b;
@@ -88,20 +119,20 @@ public class QBasic
 		switch (style)
 		{
 			case LineBoxStyle.None:
-				Draw.DrawLine(_pixelBuffer, _bufferWidth, _bufferHeight, x1, y1, x2, y2, r, g, b, a);
+				Draw.DrawLine(buffer, width, height, x1, y1, x2, y2, r, g, b, a);
 				break;
 			case LineBoxStyle.B:
 				// Draw the box outline
-				Draw.DrawLine(_pixelBuffer, _bufferWidth, _bufferHeight, x1, y1, x2, y1, r, g, b, a); // Top
-				Draw.DrawLine(_pixelBuffer, _bufferWidth, _bufferHeight, x1, y2, x2, y2, r, g, b, a); // Bottom
-				Draw.DrawLine(_pixelBuffer, _bufferWidth, _bufferHeight, x1, y1, x1, y2, r, g, b, a); // Left
-				Draw.DrawLine(_pixelBuffer, _bufferWidth, _bufferHeight, x2, y1, x2, y2, r, g, b, a); // Right
+				Draw.DrawLine(buffer, width, height, x1, y1, x2, y1, r, g, b, a); // Top
+				Draw.DrawLine(buffer, width, height, x1, y2, x2, y2, r, g, b, a); // Bottom
+				Draw.DrawLine(buffer, width, height, x1, y1, x1, y2, r, g, b, a); // Left
+				Draw.DrawLine(buffer, width, height, x2, y1, x2, y2, r, g, b, a); // Right
 				break;
 			case LineBoxStyle.BF:
 				// Draw filled box
 				for (int y = y1; y <= y2; y++)
 				{
-					Draw.DrawLine(_pixelBuffer, _bufferWidth, _bufferHeight, x1, y, x2, y, r, g, b, a);
+					Draw.DrawLine(buffer, width, height, x1, y, x2, y, r, g, b, a);
 				}
 				break;
 		}

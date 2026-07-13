@@ -51,6 +51,95 @@ namespace Gorillas.Engine
 			}
 		}
 
+		/// <summary>
+		/// Draws a circle outline on a CPU pixel buffer using the Midpoint Circle Algorithm. The method calculates the points of the circle and draws them symmetrically in all octants.
+		/// </summary>
+		/// <param name="frameBuffer"></param>
+		/// <param name="bufferWidth"></param>
+		/// <param name="bufferHeight"></param>
+		/// <param name="cx"></param>
+		/// <param name="cy"></param>
+		/// <param name="radius"></param>
+		/// <param name="r"></param>
+		/// <param name="g"></param>
+		/// <param name="b"></param>
+		/// <param name="a"></param>
+		public static void DrawCircleOutline(byte[] frameBuffer, int bufferWidth, int bufferHeight, int cx, int cy, int radius, byte r, byte g, byte b, byte a)
+		{
+			int x = radius;
+			int y = 0;
+			int err = 0;
+
+			while (x >= y)
+			{
+				// Draw the 8 octants of the circle using symmetric reflection
+				DrawPixel(frameBuffer, bufferWidth, bufferHeight, cx + x, cy + y, r, g, b, a);
+				DrawPixel(frameBuffer, bufferWidth, bufferHeight, cx + y, cy + x, r, g, b, a);
+				DrawPixel(frameBuffer, bufferWidth, bufferHeight, cx - y, cy + x, r, g, b, a);
+				DrawPixel(frameBuffer, bufferWidth, bufferHeight, cx - x, cy + y, r, g, b, a);
+				DrawPixel(frameBuffer, bufferWidth, bufferHeight, cx - x, cy - y, r, g, b, a);
+				DrawPixel(frameBuffer, bufferWidth, bufferHeight, cx - y, cy - x, r, g, b, a);
+				DrawPixel(frameBuffer, bufferWidth, bufferHeight, cx + y, cy - x, r, g, b, a);
+				DrawPixel(frameBuffer, bufferWidth, bufferHeight, cx + x, cy - y, r, g, b, a);
+
+				if (err <= 0)
+				{
+					y += 1;
+					err += 2 * y + 1;
+				}
+
+				if (err > 0)
+				{
+					x -= 1;
+					err -= 2 * x + 1;
+				}
+			}
+		}
+
+		/// <summary>
+		/// Draws a circle on a CPU pixel buffer in a manner consistent with QBASIC's CIRCLE command. The method calculates the points of the circle based on the specified radius and center coordinates, and it supports optional parameters for color, start angle, end angle, and aspect ratio.
+		/// </summary>
+		/// <param name="fameBuffer"></param>
+		/// <param name="bufferWidth"></param>
+		/// <param name="bufferHeight"></param>
+		/// <param name="step"></param>
+		/// <param name="cx"></param>
+		/// <param name="cy"></param>
+		/// <param name="radius"></param>
+		/// <param name="color"></param>
+		/// <param name="startAngle"></param>
+		/// <param name="endAngle"></param>
+		/// <param name="aspect"></param>
+		public static void DrawQBasicCircle(byte[] frameBuffer, int bufferWidth, int bufferHeight, bool step, int cx, int cy, int radius, int color, float startAngle, float endAngle, float aspect)
+		{
+			// Normalize QBASIC style angles (ensure start is < end)
+			if (startAngle < 0) startAngle = (float)(2 * Math.PI) + (float)(startAngle % (2 * Math.PI));
+			if (endAngle < 0) endAngle = (float)(2 * Math.PI) + (float)(endAngle % (2 * Math.PI));
+			if (endAngle <= startAngle) endAngle += (float)(2 * Math.PI);
+
+			// Calculate a safe stepping threshold for the trigonometric loop
+			double deltaTheta = 1.0 / (radius * Math.Max(1.0, aspect));
+
+			for (double theta = startAngle; theta <= endAngle; theta += deltaTheta)
+			{
+				// Parametric equations for ellipse/circle
+				double xOffset = radius * Math.Cos(theta);
+				double yOffset = radius * Math.Sin(theta) * aspect;
+
+				int px = (int)Math.Round(cx + xOffset);
+				int py = (int)Math.Round(cy + yOffset);
+
+				// Bounds checking before writing to the raw array
+				if (px >= 0 && px < bufferWidth && py >= 0 && py < bufferHeight)
+				{
+					frameBuffer[py * bufferWidth + px] = (byte)((color >> 24) & 0xFF);
+					frameBuffer[py * bufferWidth + px + 1 ] = (byte)((color >> 16) & 0xFF);
+					frameBuffer[py * bufferWidth + px + 2 ] = (byte)((color >> 8) & 0xFF);
+					frameBuffer[py * bufferWidth + px + 3 ] = (byte)((color >> 0) & 0xFF);
+				}
+			}
+		}
+
 		public static void DrawFilledCircle(byte[] frameBuffer, int bufferWidth, int bufferHeight, int xc, int yc, int radius, byte r, byte g, byte b, byte a)
 		{
 			int x = 0;
@@ -76,7 +165,7 @@ namespace Gorillas.Engine
 				x++;
 			}
 		}
-		
+
 		private static void PlotCirclePoints(byte[] frameBuffer, int bufferWidth, int bufferHeight, int xc, int yc, int x, int y, byte r, byte g, byte b, byte a)
 		{
 			// Array of 8 symmetric points

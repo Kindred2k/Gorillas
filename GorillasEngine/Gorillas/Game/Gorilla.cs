@@ -36,9 +36,9 @@ namespace Gorillas.Game
 		private int[] GorillaY = new int[2]; // Y coordinate of the two gorillas
 		private int LastBuilding;
 
-		private double pi = Math.Atan(1) * 4; // pi constant
-		private long[] LBan, RBan, UBan, DBan; // Graphical picture of banana
-		private long[] GorD, GorL, GorR; // Graphical pictures of Gorilla arms
+		private double pi = Math.PI; // pi constant
+		private byte[] LBan, RBan, UBan, DBan; // Graphical picture of banana
+		private byte[] GorD, GorL, GorR; // Graphical pictures of Gorilla arms
 
 		private double gravity;
 		private int Wind; // TODO: determine if this sould be a double
@@ -217,11 +217,16 @@ namespace Gorillas.Game
 			CENTER(12, "of the playing field, its length relative to its strength.");
 			CENTER(24, "Press any key to continue");
 
+			// TODO: add ability to play music here and hook up "SparklePause()" ;) */
 			/*
 			PLAY "MBT160O1L8CDEDCDL4ECC"
 			SparklePause
-			IF Mode = 1 THEN MaxCol = 40
 			*/
+
+			if (Mode == 1)
+			{
+				MaxCol = 40;
+			}
 		}
 
 		public void DrawGorilla(int x, int y, int arms)
@@ -253,34 +258,36 @@ namespace Gorillas.Game
 			// legs
 			for (int i = 0; i <= 4; i++)
 			{
-				_qBasic.CIRCLE(x + Scl(i), y + Scl(25), Scl(10), OBJECTCOLOR, 3 * pi / 4, 9 * pi / 8);
-				_qBasic.CIRCLE(x + Scl(-6) + Scl(i - .1f), y + Scl(25), Scl(10), OBJECTCOLOR, 15 * pi / 8, pi / 4);
+				_qBasic.CIRCLE(false, x + Scl(i), y + Scl(25), Scl(10), OBJECTCOLOR, Convert.ToSingle(3 * pi / 4), Convert.ToSingle(9 * pi / 8));
+				_qBasic.CIRCLE(false, x + Scl(-6) + Scl(i - .1f), y + Scl(25), Scl(10), OBJECTCOLOR, Convert.ToSingle(15 * pi / 8), Convert.ToSingle(pi / 4));
 			}
-			NEXT
 
-			// 'chest
-			// CIRCLE (x - Scl(4.9), y + Scl(10)), Scl(4.9), 0, 3 * pi# / 2, 0
-			// CIRCLE (x + Scl(4.9), y + Scl(10)), Scl(4.9), 0, pi#, 3 * pi# / 2
+			// chest
+			_qBasic.CIRCLE(false, x - Scl(4.9f), y + Scl(10), Scl(4.9f), 0, Convert.ToSingle(3 * pi / 2), 0);
+			_qBasic.CIRCLE(false, x + Scl(4.9f), y + Scl(10), Scl(4.9f), 0, Convert.ToSingle(pi), Convert.ToSingle(3 * pi / 2));
 
-			// FOR i = -5 TO -1
-			// 	SELECT CASE arms
-			// 	CASE 1
-			// 		'Right arm up
-			// 		CIRCLE (x + Scl(i - .1), y + Scl(14)), Scl(9), OBJECTCOLOR, 3 * pi# / 4, 5 * pi# / 4
-			// 		CIRCLE (x + Scl(4.9) + Scl(i), y + Scl(4)), Scl(9), OBJECTCOLOR, 7 * pi# / 4, pi# / 4
-			// 		GET (x - Scl(15), y - Scl(1))-(x + Scl(14), y + Scl(28)), GorR&
-			// 	CASE 2
-			// 		'Left arm up
-			// 		CIRCLE (x + Scl(i - .1), y + Scl(4)), Scl(9), OBJECTCOLOR, 3 * pi# / 4, 5 * pi# / 4
-			// 		CIRCLE (x + Scl(4.9) + Scl(i), y + Scl(14)), Scl(9), OBJECTCOLOR, 7 * pi# / 4, pi# / 4
-			// 		GET (x - Scl(15), y - Scl(1))-(x + Scl(14), y + Scl(28)), GorL&
-			// 	CASE 3
-			// 		'Both arms down
-			// 		CIRCLE (x + Scl(i - .1), y + Scl(14)), Scl(9), OBJECTCOLOR, 3 * pi# / 4, 5 * pi# / 4
-			// 		CIRCLE (x + Scl(4.9) + Scl(i), y + Scl(14)), Scl(9), OBJECTCOLOR, 7 * pi# / 4, pi# / 4
-			// 		GET (x - Scl(15), y - Scl(1))-(x + Scl(14), y + Scl(28)), GorD&
-			// 	END SELECT
-			// NEXT i
+			for (int i = -5; i <= -1; i++)
+			{
+				switch(arms)
+				{
+					case RIGHTUP:
+						// Right arm up
+						_qBasic.CIRCLE(false, x + Scl(i - .1f), y + Scl(14), Scl(9), OBJECTCOLOR, Convert.ToSingle(3 * pi / 4), Convert.ToSingle(5 * pi / 4));
+						_qBasic.CIRCLE(false, x + Scl(4.9f) + Scl(i), y + Scl(4), Scl(9), OBJECTCOLOR, Convert.ToSingle(7 * pi / 4), Convert.ToSingle(pi / 4));
+						break;
+					case LEFTUP:
+						// Left arm up
+						_qBasic.CIRCLE(false, x + Scl(i - .1f), y + Scl(4), Scl(9), OBJECTCOLOR, Convert.ToSingle(3 * pi / 4), Convert.ToSingle(5 * pi / 4));
+						_qBasic.CIRCLE(false, x + Scl(4.9f) + Scl(i), y + Scl(14), Scl(9), OBJECTCOLOR, Convert.ToSingle(7 * pi / 4), Convert.ToSingle(pi / 4));
+						break;
+					case ARMSDOWN:
+						// Both arms down
+						_qBasic.CIRCLE(false, x + Scl(i - .1f), y + Scl(14), Scl(9), OBJECTCOLOR, Convert.ToSingle(3 * pi / 4), Convert.ToSingle(5 * pi / 4));
+						_qBasic.CIRCLE(false, x + Scl(4.9f) + Scl(i), y + Scl(14), Scl(9), OBJECTCOLOR, Convert.ToSingle(7 * pi / 4), Convert.ToSingle(pi / 4));
+						break;
+				}
+
+			}
 		}
 
 
@@ -312,6 +319,10 @@ namespace Gorillas.Game
 		/// </summary>
 		/// <param name="n">The float value to scale.</param>
 		/// <returns>The scaled integer value.</returns>
+		/// <remarks>
+		/// Passing 9.0f to this function will return 5 in mode 1 and 9 in any other mode.
+		/// 9 / 2 == 4.5 + .1 == 4.6, Convert.ToInt32(4.6) == 5 (rounded up to nearest integer)
+		/// </remarks>
 		private int Scl (float n)
 		{
 			if (n != Convert.ToInt32(n))
