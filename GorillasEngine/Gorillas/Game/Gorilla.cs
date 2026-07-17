@@ -231,65 +231,169 @@ namespace Gorillas.Game
 
 		public void DrawGorilla(int x, int y, int arms)
 		{
-			// draw head
-			_qBasic.LINE(x - Scl(4), y, x + Scl(2.9f), y + Scl(6), OBJECTCOLOR, QBasic.LineBoxStyle.BF);
-			_qBasic.LINE(x - Scl(5), y + Scl(2), x + Scl(4), y + Scl(4), OBJECTCOLOR, QBasic.LineBoxStyle.BF);
+			byte[] temporaryFramebuffer = new byte[ScrWidth * ScrHeight * 4];
+			_qBasic.SetPixelBuffer(temporaryFramebuffer, ScrWidth, ScrHeight);
 
-			// draw eyes/brow
-			_qBasic.LINE(x - Scl(3), y + Scl(2), x + Scl(2), y + Scl(2), 0, QBasic.LineBoxStyle.BF);
-
-			// draw nose if ega
-			if (Mode == 9)
+			try
 			{
-				for (int i = -2; i <= -1; i++)
+				// draw head
+				_qBasic.LINE(x - Scl(4), y, x + Scl(2.9f), y + Scl(6), OBJECTCOLOR, QBasic.LineBoxStyle.BF);
+				_qBasic.LINE(x - Scl(5), y + Scl(2), x + Scl(4), y + Scl(4), OBJECTCOLOR, QBasic.LineBoxStyle.BF);
+
+				// draw eyes/brow
+				_qBasic.LINE(x - Scl(3), y + Scl(2), x + Scl(2), y + Scl(2), 0, QBasic.LineBoxStyle.BF);
+
+				// draw nose if ega
+				if (Mode == 9)
 				{
-					_qBasic.PSET(x + i, y + 4, 0);
-					_qBasic.PSET(x + i + 3, y + 4, 0);
-				}
-			}
-
-			// neck
-			_qBasic.LINE(x - Scl(3), y + Scl(7), x + Scl(2), y + Scl(7), OBJECTCOLOR);
-
-			// body
-			_qBasic.LINE(x - Scl(8), y + Scl(8), x + Scl(6.9f), y + Scl(14), OBJECTCOLOR, QBasic.LineBoxStyle.BF);
-			_qBasic.LINE(x - Scl(6), y + Scl(15), x + Scl(4.9f), y + Scl(20), OBJECTCOLOR, QBasic.LineBoxStyle.BF);
-
-			// legs
-			for (int i = 0; i <= 4; i++)
-			{
-				_qBasic.CIRCLE(false, x + Scl(i), y + Scl(25), Scl(10), OBJECTCOLOR, Convert.ToSingle(3 * pi / 4), Convert.ToSingle(9 * pi / 8));
-				_qBasic.CIRCLE(false, x + Scl(-6) + Scl(i - .1f), y + Scl(25), Scl(10), OBJECTCOLOR, Convert.ToSingle(15 * pi / 8), Convert.ToSingle(pi / 4));
-			}
-
-			// chest
-			_qBasic.CIRCLE(false, x - Scl(4.9f), y + Scl(10), Scl(4.9f), 0, Convert.ToSingle(3 * pi / 2), 0);
-			_qBasic.CIRCLE(false, x + Scl(4.9f), y + Scl(10), Scl(4.9f), 0, Convert.ToSingle(pi), Convert.ToSingle(3 * pi / 2));
-
-			for (int i = -5; i <= -1; i++)
-			{
-				switch(arms)
-				{
-					case RIGHTUP:
-						// Right arm up
-						_qBasic.CIRCLE(false, x + Scl(i - .1f), y + Scl(14), Scl(9), OBJECTCOLOR, Convert.ToSingle(3 * pi / 4), Convert.ToSingle(5 * pi / 4));
-						_qBasic.CIRCLE(false, x + Scl(4.9f) + Scl(i), y + Scl(4), Scl(9), OBJECTCOLOR, Convert.ToSingle(7 * pi / 4), Convert.ToSingle(pi / 4));
-						break;
-					case LEFTUP:
-						// Left arm up
-						_qBasic.CIRCLE(false, x + Scl(i - .1f), y + Scl(4), Scl(9), OBJECTCOLOR, Convert.ToSingle(3 * pi / 4), Convert.ToSingle(5 * pi / 4));
-						_qBasic.CIRCLE(false, x + Scl(4.9f) + Scl(i), y + Scl(14), Scl(9), OBJECTCOLOR, Convert.ToSingle(7 * pi / 4), Convert.ToSingle(pi / 4));
-						break;
-					case ARMSDOWN:
-						// Both arms down
-						_qBasic.CIRCLE(false, x + Scl(i - .1f), y + Scl(14), Scl(9), OBJECTCOLOR, Convert.ToSingle(3 * pi / 4), Convert.ToSingle(5 * pi / 4));
-						_qBasic.CIRCLE(false, x + Scl(4.9f) + Scl(i), y + Scl(14), Scl(9), OBJECTCOLOR, Convert.ToSingle(7 * pi / 4), Convert.ToSingle(pi / 4));
-						break;
+					for (int i = -2; i <= -1; i++)
+					{
+						_qBasic.PSET(x + i, y + 4, 0);
+						_qBasic.PSET(x + i + 3, y + 4, 0);
+					}
 				}
 
+				// neck
+				_qBasic.LINE(x - Scl(3), y + Scl(7), x + Scl(2), y + Scl(7), OBJECTCOLOR);
+
+				// body
+				_qBasic.LINE(x - Scl(8), y + Scl(8), x + Scl(6.9f), y + Scl(14), OBJECTCOLOR, QBasic.LineBoxStyle.BF);
+				_qBasic.LINE(x - Scl(6), y + Scl(15), x + Scl(4.9f), y + Scl(20), OBJECTCOLOR, QBasic.LineBoxStyle.BF);
+
+				// legs
+				for (int i = 0; i <= 4; i++)
+				{
+					_qBasic.CIRCLE(false, x + Scl(i), y + Scl(25), Scl(10), OBJECTCOLOR, Convert.ToSingle(3 * pi / 4), Convert.ToSingle(9 * pi / 8));
+					_qBasic.CIRCLE(false, x + Scl(-6) + Scl(i - .1f), y + Scl(25), Scl(10), OBJECTCOLOR, Convert.ToSingle(15 * pi / 8), Convert.ToSingle(pi / 4));
+				}
+
+				// chest
+				_qBasic.CIRCLE(false, x - Scl(4.9f), y + Scl(10), Scl(4.9f), 0, Convert.ToSingle(3 * pi / 2), 0);
+				_qBasic.CIRCLE(false, x + Scl(4.9f), y + Scl(10), Scl(4.9f), 0, Convert.ToSingle(pi), Convert.ToSingle(3 * pi / 2));
+
+				for (int i = -5; i <= -1; i++)
+				{
+					switch (arms)
+					{
+						case RIGHTUP:
+							// Right arm up
+							_qBasic.CIRCLE(false, x + Scl(i - .1f), y + Scl(14), Scl(9), OBJECTCOLOR, Convert.ToSingle(3 * pi / 4), Convert.ToSingle(5 * pi / 4));
+							_qBasic.CIRCLE(false, x + Scl(4.9f) + Scl(i), y + Scl(4), Scl(9), OBJECTCOLOR, Convert.ToSingle(7 * pi / 4), Convert.ToSingle(pi / 4));
+							break;
+						case LEFTUP:
+							// Left arm up
+							_qBasic.CIRCLE(false, x + Scl(i - .1f), y + Scl(4), Scl(9), OBJECTCOLOR, Convert.ToSingle(3 * pi / 4), Convert.ToSingle(5 * pi / 4));
+							_qBasic.CIRCLE(false, x + Scl(4.9f) + Scl(i), y + Scl(14), Scl(9), OBJECTCOLOR, Convert.ToSingle(7 * pi / 4), Convert.ToSingle(pi / 4));
+							break;
+						case ARMSDOWN:
+							// Both arms down
+							_qBasic.CIRCLE(false, x + Scl(i - .1f), y + Scl(14), Scl(9), OBJECTCOLOR, Convert.ToSingle(3 * pi / 4), Convert.ToSingle(5 * pi / 4));
+							_qBasic.CIRCLE(false, x + Scl(4.9f) + Scl(i), y + Scl(14), Scl(9), OBJECTCOLOR, Convert.ToSingle(7 * pi / 4), Convert.ToSingle(pi / 4));
+							break;
+					}
+				}
+			}
+			finally
+			{
+				_qBasic.SetPixelBuffer(_pixelBuffer, ScrWidth, ScrHeight);
+			}
+
+			switch (arms)
+			{
+				case RIGHTUP:
+					GorR = temporaryFramebuffer;
+					break;
+				case LEFTUP:
+					GorL = temporaryFramebuffer;
+					break;
+				case ARMSDOWN:
+					GorD = temporaryFramebuffer;
+					break;
 			}
 		}
 
+		/// <summary>
+		/// Displays gorillas on screen for the first time and allows the graphical data to be put into an array.
+		/// </summary>
+		/// <param name="player1">The name of player 1.</param>
+		/// <param name="player2">The name of player 2.</param>
+		private async Task GorillaIntro(string player1, string player2)
+		{
+			_qBasic.LOCATE(16, 34);
+			_qBasic.PRINT("--------------");
+			_qBasic.LOCATE(18, 34);
+			_qBasic.PRINT("V = View Intro");
+			_qBasic.LOCATE(19, 34);
+			_qBasic.PRINT("P = Play Game");
+			_qBasic.LOCATE(21, 35);
+			_qBasic.PRINT("Your Choice?");
+
+			// Accept input from user to either view the intro or play the game
+			char? input = await _qBasic.WAITKEY();
+
+			_qBasic.SCREEN(Mode);
+			SetScreen();
+
+//   IF Mode = 1 THEN Center 5, "Please wait while gorillas are drawn."
+
+//   VIEW PRINT 9 TO 24
+
+//   IF Mode = 9 THEN PALETTE OBJECTCOLOR, BackColor
+
+//   DrawGorilla x, y, ARMSDOWN
+//   CLS 2
+//   DrawGorilla x, y, LEFTUP
+//   CLS 2
+//   DrawGorilla x, y, RIGHTUP
+//   CLS 2
+
+//   VIEW PRINT 1 TO 25
+//   IF Mode = 9 THEN PALETTE OBJECTCOLOR, 46
+
+//   IF UCASE$(Char$) = "V" THEN
+//     Center 2, "Q B A S I C   G O R I L L A S"
+//     Center 5, "             STARRING:               "
+//     P$ = Player1$ + " AND " + Player2$
+//     Center 7, P$
+
+//     PUT (x - 13, y), GorD&, PSET
+//     PUT (x + 47, y), GorD&, PSET
+//     Rest 1
+
+//     PUT (x - 13, y), GorL&, PSET
+//     PUT (x + 47, y), GorR&, PSET
+//     PLAY "t120o1l16b9n0baan0bn0bn0baaan0b9n0baan0b"
+//     Rest .3
+
+//     PUT (x - 13, y), GorR&, PSET
+//     PUT (x + 47, y), GorL&, PSET
+//     PLAY "o2l16e-9n0e-d-d-n0e-n0e-n0e-d-d-d-n0e-9n0e-d-d-n0e-"
+//     Rest .3
+
+//     PUT (x - 13, y), GorL&, PSET
+//     PUT (x + 47, y), GorR&, PSET
+//     PLAY "o2l16g-9n0g-een0g-n0g-n0g-eeen0g-9n0g-een0g-"
+//     Rest .3
+
+//     PUT (x - 13, y), GorR&, PSET
+//     PUT (x + 47, y), GorL&, PSET
+//     PLAY "o2l16b9n0baan0g-n0g-n0g-eeen0o1b9n0baan0b"
+//     Rest .3
+
+//     FOR i = 1 TO 4
+//       PUT (x - 13, y), GorL&, PSET
+//       PUT (x + 47, y), GorR&, PSET
+//       PLAY "T160O0L32EFGEFDC"
+//       Rest .1
+//       PUT (x - 13, y), GorR&, PSET
+//       PUT (x + 47, y), GorL&, PSET
+//       PLAY "T160O0L32EFGEFDC"
+//       Rest .1
+//     NEXT
+//   END IF
+
+
+		}
 
 		/*
 		DECLARE SUB Intro()

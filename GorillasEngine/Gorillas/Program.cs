@@ -181,9 +181,10 @@ namespace PixelRenderer
 			}
 		}
 
-
 		private static void OnKeyDown(IKeyboard keyboard, Key key, int arg3)
 		{
+			QBasic.HandleKeyPressed(key);
+
 			if (key == Key.F11 || (key == Key.Enter && (keyboard.IsKeyPressed(Key.AltLeft) || keyboard.IsKeyPressed(Key.AltRight))))
 			{
 				isFullscreen = !isFullscreen;
