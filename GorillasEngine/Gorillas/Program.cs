@@ -25,6 +25,12 @@ namespace PixelRenderer
 		private static int xDirection = 1;
 		private static int yDirection = 1;
 
+		// Scroller state
+		private static string scrollerText = "WELCOME TO THE GORILLAS DEMO - 1990S STYLE TEXT SCROLLER";
+		private static int scrollerOffset = 0;
+		private static double scrollerPhase = 0.0;
+		private static int scrollerVisibleColumns = 80;
+
 		// OpenGL Objects
 		private static uint textureId;
 		private static uint shaderProgram;
@@ -36,6 +42,11 @@ namespace PixelRenderer
 
 		static void Main(string[] args)
 		{
+			if (args.Length > 0)
+			{
+				scrollerText = string.Join(" ", args);
+			}
+
 			// Configure the cross-platform window properties
 			var options = WindowOptions.Default;
 			options.Size = new Vector2D<int>(320, 240); // Window size (4x upscale)
@@ -105,8 +116,10 @@ namespace PixelRenderer
 			if (_qBasic == null)
 				throw new InvalidOperationException("QBasic instance is not initialized.");
 
-			// SAFE: Normal managed array access remains identical
 			Random rand = Random.Shared;
+			scrollerPhase += deltaTime * 2.2;
+			int cycleLength = Math.Max(1, scrollerText.Length + scrollerVisibleColumns + 8);
+			scrollerOffset = (scrollerOffset + 1) % cycleLength;
 
 			for (int y = 0; y < _screenHeight; y++)
 			{
@@ -179,6 +192,8 @@ namespace PixelRenderer
 				_qBasic.LOCATE(1, i+2);
 				_qBasic.PRINT($"Color {i}");
 			}
+
+			DrawScrollerText(scrollerText, scrollerOffset);
 		}
 
 		private static void OnKeyDown(IKeyboard keyboard, Key key, int arg3)
@@ -231,6 +246,32 @@ namespace PixelRenderer
 				_gl.DeleteBuffer(vbo);
 			_gl.DeleteTexture(textureId);
 			_gl.Dispose();
+		}
+
+		private static void DrawScrollerText(string message, int offset)
+		{
+			if (string.IsNullOrWhiteSpace(message) || _qBasic == null)
+				return;
+
+			string loop = message + "   " + message;
+			int visibleColumns = Math.Max(1, scrollerVisibleColumns);
+			int rightEdge = visibleColumns + 4;
+			int baseRow = 12;
+			int amplitude = 5;
+
+			_qBasic.COLOR(15);
+			for (int i = 0; i < loop.Length; i++)
+			{
+				int column = rightEdge - (offset + i);
+				if (column < 1 || column > visibleColumns)
+					continue;
+
+				int row = baseRow + (int)Math.Round(Math.Sin((column * 0.18) + scrollerPhase * 1.6) * amplitude);
+				row = Math.Clamp(row, 2, 24);
+
+				_qBasic.LOCATE(column, row);
+				_qBasic.PRINT(loop[i].ToString());
+			}
 		}
 
 		private static void SetupFullscreenQuad()

@@ -6,15 +6,16 @@ namespace Gorillas.Engine
 {
     public sealed class FontRenderer : IDisposable
     {
-        private const string _defaultFontFileName = "Px437_IBM_VGA_8x16.ttf";
+        private const string _defaultFontFileName = "Px437_IBM_EGA_8x14.ttf";
         private const float _fontSize = 16f;
         private readonly GL _gl;
         private readonly int _bufferWidth;
         private readonly int _bufferHeight;
         private readonly byte[] _pixelBuffer;
         private readonly uint _textureId;
-        private readonly StbTrueType.stbtt_fontinfo _fontInfo;
-        private readonly GCHandle _fontBufferHandle; // Keep font data alive
+        private StbTrueType.stbtt_fontinfo _fontInfo;
+        private GCHandle _fontBufferHandle; // Keep font data alive
+        private string _fontFileName;
         private bool _disposed;
 
 		/// <summary>
@@ -36,28 +37,8 @@ namespace Gorillas.Engine
             _bufferHeight = bufferHeight;
             _pixelBuffer = pixelBuffer;
 
-            string fontPath = ResolveFontPath(fontFileName ?? _defaultFontFileName);
-            byte[] fontBuffer = File.ReadAllBytes(fontPath);
-
-            _fontInfo = new StbTrueType.stbtt_fontinfo();
-
-            // Pin the font buffer to keep it alive for the lifetime of this renderer
-            _fontBufferHandle = GCHandle.Alloc(fontBuffer, GCHandleType.Pinned);
-
-            try
-            {
-                IntPtr fontPtr = _fontBufferHandle.AddrOfPinnedObject();
-                int success = StbTrueType.stbtt_InitFont(_fontInfo, (byte*)fontPtr, 0);
-                if (success == 0)
-                {
-                    throw new InvalidOperationException("Failed to initialize the requested TrueType font.");
-                }
-            }
-            catch
-            {
-                _fontBufferHandle.Free();
-                throw;
-            }
+            _fontFileName = fontFileName ?? _defaultFontFileName;
+            LoadFont(_fontFileName);
 
             _textureId = _gl.GenTexture();
             _gl.BindTexture(TextureTarget.Texture2D, _textureId);
@@ -83,6 +64,19 @@ namespace Gorillas.Engine
         public int BufferHeight => _bufferHeight;
         public uint TextureId => _textureId;
         public byte[] PixelBuffer => _pixelBuffer;
+
+        public void SwitchFont(string fontFileName)
+        {
+            ThrowIfDisposed();
+            ArgumentException.ThrowIfNullOrWhiteSpace(fontFileName);
+
+            if (string.Equals(fontFileName, _fontFileName, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            LoadFont(fontFileName);
+        }
 
         public void Clear()
         {
@@ -228,6 +222,40 @@ namespace Gorillas.Engine
                 }
 
                 currentX += (int)(advanceWidth * scale);
+            }
+        }
+
+        private unsafe void LoadFont(string fontFileName)
+        {
+            string fontPath = ResolveFontPath(fontFileName);
+            byte[] fontBuffer = File.ReadAllBytes(fontPath);
+
+            if (_fontBufferHandle.IsAllocated)
+            {
+                _fontBufferHandle.Free();
+            }
+
+            _fontInfo = new StbTrueType.stbtt_fontinfo();
+            _fontBufferHandle = GCHandle.Alloc(fontBuffer, GCHandleType.Pinned);
+
+            try
+            {
+                IntPtr fontPtr = _fontBufferHandle.AddrOfPinnedObject();
+                int success = StbTrueType.stbtt_InitFont(_fontInfo, (byte*)fontPtr, 0);
+                if (success == 0)
+                {
+                    throw new InvalidOperationException("Failed to initialize the requested TrueType font.");
+                }
+
+                _fontFileName = fontFileName;
+            }
+            catch
+            {
+                if (_fontBufferHandle.IsAllocated)
+                {
+                    _fontBufferHandle.Free();
+                }
+                throw;
             }
         }
 

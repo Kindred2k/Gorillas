@@ -85,12 +85,14 @@ public class QBasic
 				_bufferHeight = 200;
 				_charWidth = 8;
 				_charHeight = 8;
+				_fontRenderer.SwitchFont("PxPlus_IBM_CGA.ttf");
 				break;
 			case 9:
 				_bufferWidth = 640;
 				_bufferHeight = 350;
 				_charWidth = 8;
 				_charHeight = 14;
+				_fontRenderer.SwitchFont("Px437_IBM_EGA_8x14.ttf");
 				break;
 			case 0:
 			default:
@@ -98,6 +100,7 @@ public class QBasic
 				_bufferHeight = 350;
 				_charWidth = 8;
 				_charHeight = 14;
+				_fontRenderer.SwitchFont("Px437_IBM_EGA_8x14.ttf");
 				break;
 		}
 
