@@ -117,9 +117,6 @@ namespace PixelRenderer
 				throw new InvalidOperationException("QBasic instance is not initialized.");
 
 			Random rand = Random.Shared;
-			scrollerPhase += deltaTime * 2.2;
-			int cycleLength = Math.Max(1, scrollerText.Length + scrollerVisibleColumns + 8);
-			scrollerOffset = (scrollerOffset + 1) % cycleLength;
 
 			for (int y = 0; y < _screenHeight; y++)
 			{
@@ -193,7 +190,13 @@ namespace PixelRenderer
 				_qBasic.PRINT($"Color {i}");
 			}
 
+			// Marquee scroller + sine wave
+			scrollerPhase += deltaTime * 2.2;
+			int cycleLength = Math.Max(1, scrollerText.Length + scrollerVisibleColumns + 8);
+			scrollerOffset = (scrollerOffset + 1) % cycleLength;
 			DrawScrollerText(scrollerText, scrollerOffset);
+
+
 		}
 
 		private static void OnKeyDown(IKeyboard keyboard, Key key, int arg3)
@@ -260,6 +263,7 @@ namespace PixelRenderer
 			int amplitude = 5;
 
 			_qBasic.COLOR(15);
+
 			for (int i = 0; i < loop.Length; i++)
 			{
 				int column = rightEdge - (offset + i);
