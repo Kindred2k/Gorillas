@@ -73,12 +73,14 @@ namespace Gorillas.Game
 			ScrWidth = scrWidth;
 			ScrHeight = scrHeight;
 			Mode = mode;
+
 			// Set screen color variables
 			ExplosionColor = 12; // Red
 			SunColor = 14; // Yellow
 			BackColor = 0; // Black
 			SunHit = 4; // Blue
-						// Set other variables
+
+			// Set other variables
 			SunHt = Scl(25);
 			GHeight = Scl(20);
 			MachSpeed = 343.0f; // Speed of sound in m/s
@@ -339,65 +341,66 @@ namespace Gorillas.Game
 				Center(5, "Please wait while gorillas are drawn.");
 			}
 
+			_qBasic.VIEW(9, 24);
 
+			if (Mode == 9)
+			{
+				PALETTE(OBJECTCOLOR, BackColor);
+			}
 
-//   VIEW PRINT 9 TO 24
+			//   IF Mode = 9 THEN PALETTE OBJECTCOLOR, BackColor
 
-//   IF Mode = 9 THEN PALETTE OBJECTCOLOR, BackColor
+			//   DrawGorilla x, y, ARMSDOWN
+			//   CLS 2
+			//   DrawGorilla x, y, LEFTUP
+			//   CLS 2
+			//   DrawGorilla x, y, RIGHTUP
+			//   CLS 2
 
-//   DrawGorilla x, y, ARMSDOWN
-//   CLS 2
-//   DrawGorilla x, y, LEFTUP
-//   CLS 2
-//   DrawGorilla x, y, RIGHTUP
-//   CLS 2
+			//   VIEW PRINT 1 TO 25
+			//   IF Mode = 9 THEN PALETTE OBJECTCOLOR, 46
 
-//   VIEW PRINT 1 TO 25
-//   IF Mode = 9 THEN PALETTE OBJECTCOLOR, 46
+			//   IF UCASE$(Char$) = "V" THEN
+			//     Center 2, "Q B A S I C   G O R I L L A S"
+			//     Center 5, "             STARRING:               "
+			//     P$ = Player1$ + " AND " + Player2$
+			//     Center 7, P$
 
-//   IF UCASE$(Char$) = "V" THEN
-//     Center 2, "Q B A S I C   G O R I L L A S"
-//     Center 5, "             STARRING:               "
-//     P$ = Player1$ + " AND " + Player2$
-//     Center 7, P$
+			//     PUT (x - 13, y), GorD&, PSET
+			//     PUT (x + 47, y), GorD&, PSET
+			//     Rest 1
 
-//     PUT (x - 13, y), GorD&, PSET
-//     PUT (x + 47, y), GorD&, PSET
-//     Rest 1
+			//     PUT (x - 13, y), GorL&, PSET
+			//     PUT (x + 47, y), GorR&, PSET
+			//     PLAY "t120o1l16b9n0baan0bn0bn0baaan0b9n0baan0b"
+			//     Rest .3
 
-//     PUT (x - 13, y), GorL&, PSET
-//     PUT (x + 47, y), GorR&, PSET
-//     PLAY "t120o1l16b9n0baan0bn0bn0baaan0b9n0baan0b"
-//     Rest .3
+			//     PUT (x - 13, y), GorR&, PSET
+			//     PUT (x + 47, y), GorL&, PSET
+			//     PLAY "o2l16e-9n0e-d-d-n0e-n0e-n0e-d-d-d-n0e-9n0e-d-d-n0e-"
+			//     Rest .3
 
-//     PUT (x - 13, y), GorR&, PSET
-//     PUT (x + 47, y), GorL&, PSET
-//     PLAY "o2l16e-9n0e-d-d-n0e-n0e-n0e-d-d-d-n0e-9n0e-d-d-n0e-"
-//     Rest .3
+			//     PUT (x - 13, y), GorL&, PSET
+			//     PUT (x + 47, y), GorR&, PSET
+			//     PLAY "o2l16g-9n0g-een0g-n0g-n0g-eeen0g-9n0g-een0g-"
+			//     Rest .3
 
-//     PUT (x - 13, y), GorL&, PSET
-//     PUT (x + 47, y), GorR&, PSET
-//     PLAY "o2l16g-9n0g-een0g-n0g-n0g-eeen0g-9n0g-een0g-"
-//     Rest .3
+			//     PUT (x - 13, y), GorR&, PSET
+			//     PUT (x + 47, y), GorL&, PSET
+			//     PLAY "o2l16b9n0baan0g-n0g-n0g-eeen0o1b9n0baan0b"
+			//     Rest .3
 
-//     PUT (x - 13, y), GorR&, PSET
-//     PUT (x + 47, y), GorL&, PSET
-//     PLAY "o2l16b9n0baan0g-n0g-n0g-eeen0o1b9n0baan0b"
-//     Rest .3
-
-//     FOR i = 1 TO 4
-//       PUT (x - 13, y), GorL&, PSET
-//       PUT (x + 47, y), GorR&, PSET
-//       PLAY "T160O0L32EFGEFDC"
-//       Rest .1
-//       PUT (x - 13, y), GorR&, PSET
-//       PUT (x + 47, y), GorL&, PSET
-//       PLAY "T160O0L32EFGEFDC"
-//       Rest .1
-//     NEXT
-//   END IF
-
-
+			//     FOR i = 1 TO 4
+			//       PUT (x - 13, y), GorL&, PSET
+			//       PUT (x + 47, y), GorR&, PSET
+			//       PLAY "T160O0L32EFGEFDC"
+			//       Rest .1
+			//       PUT (x - 13, y), GorR&, PSET
+			//       PUT (x + 47, y), GorL&, PSET
+			//       PLAY "T160O0L32EFGEFDC"
+			//       Rest .1
+			//     NEXT
+			//   END IF
 		}
 
 		/*

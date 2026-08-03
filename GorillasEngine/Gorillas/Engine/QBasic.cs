@@ -23,6 +23,9 @@ public class QBasic
 	private int _bufferHeight;
 	private FontRenderer _fontRenderer;
 
+	// Viewport settings
+	private int[] _textmodeViewportLineRange = new int[] { 1, 25 };
+
 	// Map simple note names to frequencies (Octave 4)
 	private static readonly Dictionary<string, double> _notes = new Dictionary<string, double> {
 		{ "C", 261.63 }, { "D", 293.66 }, { "E", 329.63 },
@@ -360,5 +363,43 @@ public class QBasic
 		{
 			Thread.Sleep(10);
 		}
+	}
+
+	/// <summary>
+	/// Sets the viewport for text mode rendering. The viewport is defined by a starting line and an ending line, which must be within the range of 1 to 25. This allows for partial screen updates and can be useful for creating split-screen effects or focusing on specific areas of the text display.
+	/// </summary>
+	/// <param name="startLine">The starting line of the viewport (1-25).</param>
+	/// <param name="endLine">The ending line of the viewport (1-25).</param>
+	public void VIEW(int startLine, int endLine)
+	{
+		// TODO: do some failsafe checks to ensure QBasic is currently rendering in a textmode environment before allowing the viewport to be set. If not, throw an exception or ignore the command.
+
+		if (startLine < 1 || endLine > 25 || startLine >= endLine)
+		{
+			throw new ArgumentOutOfRangeException("Invalid line range for VIEW command.");
+		}
+
+		_textmodeViewportLineRange[0] = startLine;
+		_textmodeViewportLineRange[1] = endLine;
+	}
+
+	/// <summary>
+	/// Sets the color of a specific palette index to a new color value. The index must be between 0 and 15, and the color must be a valid QBasic color index (0-15). This allows for dynamic changes to the color palette during runtime, enabling effects such as flashing colors or changing themes.
+	/// </summary>
+	/// <param name="index">The palette index to change (0-15).</param>
+	/// <param name="color">The new color value to set at the specified index (0-15).</param>
+	public void PALETTE(int index, int color)
+	{
+		if (index < 0 || index > 15)
+		{
+			throw new ArgumentOutOfRangeException("Palette index must be between 0 and 15.");
+		}
+
+		if (!ColorMap.ContainsKey(color))
+		{
+			throw new ArgumentOutOfRangeException("Color must be a valid QBasic color index (0-15).");
+		}
+
+		CurrentPalette[index] = color;
 	}
 }
