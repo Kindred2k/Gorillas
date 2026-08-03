@@ -152,8 +152,8 @@ namespace Gorillas.Game
 		{
 			if (Mode == 9)
 			{
-				this.ExplosionColor = 2;
-				this.BackColor = 1;
+				ExplosionColor = 2;
+				BackColor = 1;
 				Palettes.Add(0, 1);
 				Palettes.Add(1, 46);
 				Palettes.Add(2, 44);
@@ -168,8 +168,8 @@ namespace Gorillas.Game
 			}
 			else
 			{
-				this.ExplosionColor = 2;
-				this.BackColor = 0;
+				ExplosionColor = 2;
+				BackColor = 0;
 
 				// Blank screen
 				Draw.FillBuffer(_pixelBuffer, 0, 0, 0, 255);
@@ -181,7 +181,7 @@ namespace Gorillas.Game
 		/// </summary>
 		/// <param name="row"></param>
 		/// <param name="text"></param>
-		private void CENTER(int row, string text)
+		private void Center(int row, string text)
 		{
 			int Col = MaxCol / 2;
 			_qBasic.LOCATE(row, Convert.ToInt32(Col - (text.Length / 2 + 0.5)));
@@ -189,7 +189,7 @@ namespace Gorillas.Game
 		}
 
 		[Obsolete("This method was never implemented by Microsoft in GORILLA.BAS.")]
-		public void ENDGAME()
+		public void EndGame()
 		{
 		}
 
@@ -206,16 +206,16 @@ namespace Gorillas.Game
 			CLS
 			*/
 
-			CENTER(4, "Q B a s i c    G O R I L L A S");
+			Center(4, "Q B a s i c    G O R I L L A S");
 
 			_qBasic.COLOR(7);
-			CENTER(6, "Copyright (C) Microsoft Corporation 1990");
-			CENTER(8, "Your mission is to hit your opponent with the exploding");
-			CENTER(9, "banana by varying the angle and power of your throw, taking");
-			CENTER(10, "into account wind speed, gravity, and the city skyline.");
-			CENTER(11, "The wind speed is shown by a directional arrow at the bottom");
-			CENTER(12, "of the playing field, its length relative to its strength.");
-			CENTER(24, "Press any key to continue");
+			Center(6, "Copyright (C) Microsoft Corporation 1990");
+			Center(8, "Your mission is to hit your opponent with the exploding");
+			Center(9, "banana by varying the angle and power of your throw, taking");
+			Center(10, "into account wind speed, gravity, and the city skyline.");
+			Center(11, "The wind speed is shown by a directional arrow at the bottom");
+			Center(12, "of the playing field, its length relative to its strength.");
+			Center(24, "Press any key to continue");
 
 			// TODO: add ability to play music here and hook up "SparklePause()" ;) */
 			/*
@@ -334,7 +334,12 @@ namespace Gorillas.Game
 			_qBasic.SCREEN(Mode);
 			SetScreen();
 
-//   IF Mode = 1 THEN Center 5, "Please wait while gorillas are drawn."
+			if (Mode == 1)
+			{
+				Center(5, "Please wait while gorillas are drawn.");
+			}
+
+
 
 //   VIEW PRINT 9 TO 24
 

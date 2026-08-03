@@ -1,6 +1,6 @@
 using Silk.NET.Input;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 
 namespace Gorillas.Engine;
 
@@ -22,6 +22,12 @@ public class QBasic
 	private int _bufferWidth;
 	private int _bufferHeight;
 	private FontRenderer _fontRenderer;
+
+	// Map simple note names to frequencies (Octave 4)
+	private static readonly Dictionary<string, double> _notes = new Dictionary<string, double> {
+		{ "C", 261.63 }, { "D", 293.66 }, { "E", 329.63 },
+		{ "F", 349.23 }, { "G", 392.00 }, { "A", 440.00 }, { "B", 493.88 }
+	};
 
 	/// <summary>
 	/// A dictionary that maps QBasic color indices to their corresponding RGB values. This allows for easy translation of QBasic color codes into actual colors that can be rendered on the screen.
@@ -315,5 +321,30 @@ public class QBasic
 		byte a = 255;
 
 		Draw.DrawPixel(_pixelBuffer, x, y, _bufferWidth, _bufferHeight, r, g, b, a);
+	}
+
+	public void PLAY(Dictionary<string, long> sequence)
+	{
+		using WaveOutEvent? outputDevice = new WaveOutEvent();
+
+		foreach (var step in sequence)
+		{
+			if (_notes.TryGetValue(step.Key, out double freq))
+			{
+				// QBasic traditionally used square waves for its internal speaker
+				var signal = new SignalGenerator(44100, 1)
+				{
+					Type = SignalGeneratorType.Square,
+					Frequency = freq,
+					Gain = 0.2 // Keep volume low to protect ears
+				}.Take(TimeSpan.FromMilliseconds(step.Value));
+
+				outputDevice.Init(signal);
+				outputDevice.Play();
+
+				// Wait for the current note to finish playing
+				Thread.Sleep((int)step.Value + 50);
+			}
+		}
 	}
 }
