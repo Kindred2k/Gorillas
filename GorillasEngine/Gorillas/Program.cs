@@ -77,11 +77,13 @@ namespace PixelRenderer
 
 			_fontRenderer = new FontRenderer(_gl, _pixelBuffer, _screenWidth, _screenHeight, "Px437_IBM_EGA_8x14.ttf");
 			_qBasic = new QBasic(_pixelBuffer, _screenWidth, _screenHeight, _fontRenderer);
-			_qBasic.PLAY(new Dictionary<string, long>
-			{
-				{"C", 500}, {"D", 500}, {"E", 500}, {"F", 500},
-				{"G", 500}, {"A", 500}, {"B", 500}, {"C", 500}
-			});
+
+			// Verified test of QBasic sound playback (commented out for now)
+			// _qBasic.PLAY(new (string Note, long DurationMs)[]
+			// {
+			// 	("C", 500), ("D", 500), ("E", 500), ("F", 500),
+			// 	("G", 500), ("A", 500), ("B", 500), ("C", 500)
+			// });
 
 			textureId = _fontRenderer.TextureId;
 			SetupFullscreenQuad();

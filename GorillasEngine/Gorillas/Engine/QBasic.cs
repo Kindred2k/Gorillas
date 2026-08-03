@@ -323,13 +323,18 @@ public class QBasic
 		Draw.DrawPixel(_pixelBuffer, x, y, _bufferWidth, _bufferHeight, r, g, b, a);
 	}
 
-	public void PLAY(Dictionary<string, long> sequence)
+	public void PLAY(IEnumerable<(string Note, long DurationMs)> sequence)
 	{
-		using WaveOutEvent? outputDevice = new WaveOutEvent();
+		var noteProviders = new List<ISampleProvider>();
 
 		foreach (var step in sequence)
 		{
-			if (_notes.TryGetValue(step.Key, out double freq))
+			if (step.DurationMs <= 0)
+			{
+				continue;
+			}
+
+			if (_notes.TryGetValue(step.Note, out double freq))
 			{
 				// QBasic traditionally used square waves for its internal speaker
 				var signal = new SignalGenerator(44100, 1)
@@ -337,14 +342,23 @@ public class QBasic
 					Type = SignalGeneratorType.Square,
 					Frequency = freq,
 					Gain = 0.2 // Keep volume low to protect ears
-				}.Take(TimeSpan.FromMilliseconds(step.Value));
-
-				outputDevice.Init(signal);
-				outputDevice.Play();
-
-				// Wait for the current note to finish playing
-				Thread.Sleep((int)step.Value + 50);
+				}.Take(TimeSpan.FromMilliseconds(step.DurationMs));
+				noteProviders.Add(signal);
 			}
+		}
+
+		if (noteProviders.Count == 0)
+		{
+			return;
+		}
+
+		using WaveOutEvent outputDevice = new WaveOutEvent();
+		outputDevice.Init(new ConcatenatingSampleProvider(noteProviders));
+		outputDevice.Play();
+
+		while (outputDevice.PlaybackState == PlaybackState.Playing)
+		{
+			Thread.Sleep(10);
 		}
 	}
 }
