@@ -118,8 +118,13 @@ public class QBasic
 
 		if (_pixelBuffer != null)
 		{
-			Draw.FillBuffer(_pixelBuffer, 0, 0, 0, 255);
+			CLS();
 		}
+	}
+
+	public void CLS()
+	{
+		Draw.FillBuffer(_pixelBuffer, 0, 0, 0, 255);
 	}
 
 	public void SetPixelBuffer(byte[] pixelBuffer, int bufferWidth, int bufferHeight)
@@ -153,6 +158,25 @@ public class QBasic
 			_waitKeyTcs = tcs;
 			_expectedWaitKey = expectedKey;
 			return tcs.Task;
+		}
+	}
+
+	public bool HasPendingKey
+	{
+		get
+		{
+			lock (_waitKeyLock)
+			{
+				return _pendingKeys.Count > 0;
+			}
+		}
+	}
+
+	public void ClearPendingKeys()
+	{
+		lock (_waitKeyLock)
+		{
+			_pendingKeys.Clear();
 		}
 	}
 
@@ -232,6 +256,7 @@ public class QBasic
 			Key.Number7 => '7',
 			Key.Number8 => '8',
 			Key.Number9 => '9',
+			Key.Period => '.',
 			_ => null
 		};
 	}
@@ -324,6 +349,36 @@ public class QBasic
 		byte a = 255;
 
 		Draw.DrawPixel(_pixelBuffer, x, y, _bufferWidth, _bufferHeight, r, g, b, a);
+	}
+
+	public void PUT(byte[]? sprite, int sourceX, int sourceY, int destinationX, int destinationY)
+	{
+		if (sprite == null)
+		{
+			return;
+		}
+
+		for (int spriteY = 0; spriteY < _bufferHeight; spriteY++)
+		{
+			for (int spriteX = 0; spriteX < _bufferWidth; spriteX++)
+			{
+				int sourceIndex = (spriteY * _bufferWidth + spriteX) * 4;
+				if (sprite[sourceIndex + 3] == 0)
+				{
+					continue;
+				}
+
+				int targetX = destinationX + spriteX - sourceX;
+				int targetY = destinationY + spriteY - sourceY;
+				if (targetX < 0 || targetX >= _bufferWidth || targetY < 0 || targetY >= _bufferHeight)
+				{
+					continue;
+				}
+
+				int targetIndex = (targetY * _bufferWidth + targetX) * 4;
+				System.Buffer.BlockCopy(sprite, sourceIndex, _pixelBuffer, targetIndex, 4);
+			}
+		}
 	}
 
 	public void PLAY(IEnumerable<(string Note, long DurationMs)> sequence)
