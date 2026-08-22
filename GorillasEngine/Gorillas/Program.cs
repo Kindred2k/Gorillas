@@ -1,4 +1,5 @@
 ﻿using Gorillas.Engine;
+using Gorillas.Game;
 using Silk.NET.Input;
 using Silk.NET.Maths;
 using Silk.NET.OpenGL;
@@ -19,7 +20,8 @@ namespace PixelRenderer
 		private const int _screenHeight = 350;
 		private static byte[]? _pixelBuffer;
 
-		// Tests
+		/*
+		// Test counters
 		private static int xCounter = 0;
 		private static int yCounter = 0;
 		private static int xDirection = 1;
@@ -30,6 +32,7 @@ namespace PixelRenderer
 		private static int scrollerOffset = 0;
 		private static double scrollerPhase = 0.0;
 		private static int scrollerVisibleColumns = 80;
+		*/
 
 		// OpenGL Objects
 		private static uint textureId;
@@ -39,18 +42,22 @@ namespace PixelRenderer
 		private static int textureLocation;
 		private static bool isFullscreen;
 		private static IKeyboard? keyboard;
+		private static Gorilla? _gorilla;
+		private static Task? _gameTask;
 
 		static void Main(string[] args)
 		{
+			/*
 			if (args.Length > 0)
 			{
 				scrollerText = string.Join(" ", args);
 			}
+			*/
 
 			// Configure the cross-platform window properties
 			var options = WindowOptions.Default;
 			options.Size = new Vector2D<int>(320, 240); // Window size (4x upscale)
-			options.Title = "Silk.NET High-Performance Pixel Renderer";
+			options.Title = "QBasic Gorillas in C#";
 			options.VSync = true;
 
 			_window = Window.Create(options);
@@ -78,13 +85,6 @@ namespace PixelRenderer
 			_fontRenderer = new FontRenderer(_gl, _pixelBuffer, _screenWidth, _screenHeight, "Px437_IBM_EGA_8x14.ttf");
 			_qBasic = new QBasic(_pixelBuffer, _screenWidth, _screenHeight, _fontRenderer);
 
-			// Verified test of QBasic sound playback (commented out for now)
-			// _qBasic.PLAY(new (string Note, long DurationMs)[]
-			// {
-			// 	("C", 500), ("D", 500), ("E", 500), ("F", 500),
-			// 	("G", 500), ("A", 500), ("B", 500), ("C", 500)
-			// });
-
 			textureId = _fontRenderer.TextureId;
 			SetupFullscreenQuad();
 			shaderProgram = CreateShaderProgram(
@@ -110,100 +110,27 @@ namespace PixelRenderer
 				}
 				""");
 			textureLocation = _gl.GetUniformLocation(shaderProgram, "uTexture");
+
+			_gorilla = new Gorilla(_pixelBuffer, _screenWidth, _screenHeight, 9, _qBasic);
+			_gameTask = RunGameAsync();
+		}
+
+		private static async Task RunGameAsync()
+		{
+			if (_gorilla == null)
+			{
+				return;
+			}
+
+			await _gorilla.Intro();
+			var inputs = await _gorilla.GetInputs();
+			await _gorilla.GorillaIntro(inputs.Player1, inputs.Player2);
+			await _gorilla.PlayGame(inputs.Player1, inputs.Player2, inputs.NumGames);
 		}
 
 		private static void OnUpdate(double deltaTime)
 		{
-			if (_pixelBuffer == null)
-				throw new InvalidOperationException("Pixel buffer is not initialized.");
-
-			if (_fontRenderer == null)
-				throw new InvalidOperationException("Font renderer is not initialized.");
-
-			if (_qBasic == null)
-				throw new InvalidOperationException("QBasic instance is not initialized.");
-
-			Random rand = Random.Shared;
-
-			for (int y = 0; y < _screenHeight; y++)
-			{
-				for (int x = 0; x < _screenWidth; x++)
-				{
-					byte r = (byte)(x ^ y);
-					byte g = (byte)(rand.Next(0, 255));
-					byte b = (byte)(y * 255 / _screenHeight);
-					byte a = 255;
-
-					_pixelBuffer[(y * _screenWidth + x) * 4 + 0] = r;
-					_pixelBuffer[(y * _screenWidth + x) * 4 + 1] = g;
-					_pixelBuffer[(y * _screenWidth + x) * 4 + 2] = b;
-					_pixelBuffer[(y * _screenWidth + x) * 4 + 3] = a;
-				}
-			}
-
-			byte randomYColor = (byte)rand.Next(0, 255);
-			byte randomXColor = (byte)rand.Next(0, 255);
-
-			for (int y = 0; y < _screenHeight; y++)
-			{
-				_pixelBuffer[(y * _screenWidth + xCounter) * 4 + 0] = randomYColor;
-				_pixelBuffer[(y * _screenWidth + xCounter) * 4 + 1] = 0;
-				_pixelBuffer[(y * _screenWidth + xCounter) * 4 + 2] = 0;
-				_pixelBuffer[(y * _screenWidth + xCounter) * 4 + 3] = 255;
-			}
-
-			for (int x = 0; x < _screenWidth; x++)
-			{
-				_pixelBuffer[(yCounter * _screenWidth + x) * 4 + 0] = 0;
-				_pixelBuffer[(yCounter * _screenWidth + x) * 4 + 1] = randomXColor;
-				_pixelBuffer[(yCounter * _screenWidth + x) * 4 + 2] = randomXColor;
-				_pixelBuffer[(yCounter * _screenWidth + x) * 4 + 3] = 255;
-			}
-
-			xCounter += xDirection;
-			yCounter += yDirection;
-
-			if (xCounter >= _screenWidth - 1)
-				xDirection = -1;
-
-			if (xCounter < 1)
-				xDirection = 1;
-
-			if (yCounter >= _screenHeight - 1)
-				yDirection = -1;
-
-			if (yCounter < 1)
-				yDirection = 1;
-
-			_qBasic.COLOR(15);
-			_qBasic.LOCATE(1, 1);
-			_qBasic.PRINT("1,1");
-			_qBasic.LOCATE(76, 1);
-			_qBasic.PRINT("80,1");
-			_qBasic.LOCATE(1, 25);
-			_qBasic.PRINT("1,25");
-			_qBasic.LOCATE(75, 25);
-			_qBasic.PRINT("80,25");
-
-			// _fontRenderer.RenderText("HELLO, CLARA!", 10, 20, 255, 255, 255);
-			// _fontRenderer.RenderText("This text is RED.", 10, 40, 255, 0, 0);
-			// _fontRenderer.RenderText("This text is GREEN.", 10, 60, 0, 255, 0);
-			// _fontRenderer.RenderText("This text is BLUE.", 10, 80, 0, 0, 255);
-
-			for (int i = 1; i < 16; i++)
-			{
-				_qBasic.COLOR(i);
-				_qBasic.LOCATE(1, i+2);
-				_qBasic.PRINT($"Color {i}");
-			}
-
-			// Marquee scroller + sine wave
-			scrollerPhase += deltaTime * 2.2;
-			int cycleLength = Math.Max(1, scrollerText.Length + scrollerVisibleColumns + 8);
-			scrollerOffset = (scrollerOffset + 1) % cycleLength;
-			DrawScrollerText(scrollerText, scrollerOffset);
-
-
+			return;
 		}
 
 		private static void OnKeyDown(IKeyboard keyboard, Key key, int arg3)
@@ -258,6 +185,7 @@ namespace PixelRenderer
 			_gl.Dispose();
 		}
 
+		/*
 		private static void DrawScrollerText(string message, int offset)
 		{
 			if (string.IsNullOrWhiteSpace(message) || _qBasic == null)
@@ -284,6 +212,7 @@ namespace PixelRenderer
 				_qBasic.PRINT(loop[i].ToString());
 			}
 		}
+		*/
 
 		private static void SetupFullscreenQuad()
 		{
