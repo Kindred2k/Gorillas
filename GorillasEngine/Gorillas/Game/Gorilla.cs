@@ -72,10 +72,13 @@ namespace Gorillas.Game
 		public float ZoomCenterX => _zoomCenterX;
 		public float ZoomCenterY => _zoomCenterY;
 
-		// Weather overlay state; tracks pixels drawn last frame so they can be restored before the next frame.
-		private readonly List<(int x, int y, byte r, byte g, byte b, byte a)> _weatherRestoreBuffer = new();
+		// Weather overlay state; tracks the true original pixel (keyed to avoid clobbering it on overlapping writes) so it can be restored before the next frame.
+		private readonly Dictionary<(int x, int y), (byte r, byte g, byte b, byte a)> _weatherRestoreBuffer = new();
 		private System.Threading.CancellationTokenSource? _weatherCts;
 		private Task? _weatherTask;
+
+		// Shuffled bag of upcoming weather effects; refilled only when empty so every effect appears before any repeat.
+		private readonly List<int> _weatherEffectBag = new();
 
 		// Set by Program while gameplay (post-title-screen) is active, so Escape can unwind back to the title screen.
 		private CancellationToken _gameplayToken = CancellationToken.None;
@@ -1218,15 +1221,15 @@ namespace Gorillas.Game
 				{
 					try
 					{
-						await Task.Delay(rand.Next(3000, 10000), token);
+						await Task.Delay(rand.Next(2000, 6000), token);
 					}
 					catch (OperationCanceledException)
 					{
 						break;
 					}
 
-					int durationMs = rand.Next(3000, 8000);
-					switch (rand.Next(3))
+					int durationMs = rand.Next(30000, 45000);
+					switch (NextWeatherEffect(rand))
 					{
 						case 0: await RunWindGust(durationMs, token); break;
 						case 1: await RunSnow(durationMs, token); break;
@@ -1240,6 +1243,24 @@ namespace Gorillas.Game
 			}
 		}
 
+		// Draws from a shuffled bag of effect ids that is refilled only when empty, so every effect appears before any repeat.
+		private int NextWeatherEffect(Random rand)
+		{
+			if (_weatherEffectBag.Count == 0)
+			{
+				_weatherEffectBag.AddRange(new[] { 0, 1, 2 });
+				for (int i = _weatherEffectBag.Count - 1; i > 0; i--)
+				{
+					int j = rand.Next(i + 1);
+					(_weatherEffectBag[i], _weatherEffectBag[j]) = (_weatherEffectBag[j], _weatherEffectBag[i]);
+				}
+			}
+
+			int effect = _weatherEffectBag[^1];
+			_weatherEffectBag.RemoveAt(_weatherEffectBag.Count - 1);
+			return effect;
+		}
+
 		private void SetWeatherPixel(int x, int y, byte r, byte g, byte b)
 		{
 			if (x < 0 || x >= ScrWidth || y < 0 || y >= ScrHeight)
@@ -1247,19 +1268,47 @@ namespace Gorillas.Game
 				return;
 			}
 
-			int index = (y * ScrWidth + x) * 4;
-			_weatherRestoreBuffer.Add((x, y, _pixelBuffer[index], _pixelBuffer[index + 1], _pixelBuffer[index + 2], _pixelBuffer[index + 3]));
-			_pixelBuffer[index] = r;
-			_pixelBuffer[index + 1] = g;
-			_pixelBuffer[index + 2] = b;
-			_pixelBuffer[index + 3] = 255;
+			var key = (x, y);
+			if (!_weatherRestoreBuffer.ContainsKey(key))
+			{
+				// Only remember the pixel the first time it's touched this frame, so overlapping writes can't record a weather color as the "original".
+				int index = (y * ScrWidth + x) * 4;
+				_weatherRestoreBuffer[key] = (_pixelBuffer[index], _pixelBuffer[index + 1], _pixelBuffer[index + 2], _pixelBuffer[index + 3]);
+			}
+
+			Draw.DrawPixel(_pixelBuffer, x, y, ScrWidth, ScrHeight, r, g, b, 255);
+		}
+
+		private void SetWeatherBlock(int x, int y, int size, byte r, byte g, byte b)
+		{
+			for (int dy = 0; dy < size; dy++)
+			{
+				for (int dx = 0; dx < size; dx++)
+				{
+					SetWeatherPixel(x + dx, y + dy, r, g, b);
+				}
+			}
+		}
+
+		private void SetWeatherFilledCircle(int cx, int cy, int radius, byte r, byte g, byte b)
+		{
+			for (int dy = -radius; dy <= radius; dy++)
+			{
+				for (int dx = -radius; dx <= radius; dx++)
+				{
+					if (dx * dx + dy * dy <= radius * radius)
+					{
+						SetWeatherPixel(cx + dx, cy + dy, r, g, b);
+					}
+				}
+			}
 		}
 
 		private void RestoreWeatherPixels()
 		{
 			foreach (var pixel in _weatherRestoreBuffer)
 			{
-				Draw.DrawPixel(_pixelBuffer, pixel.x, pixel.y, ScrWidth, ScrHeight, pixel.r, pixel.g, pixel.b, pixel.a);
+				Draw.DrawPixel(_pixelBuffer, pixel.Key.x, pixel.Key.y, ScrWidth, ScrHeight, pixel.Value.r, pixel.Value.g, pixel.Value.b, pixel.Value.a);
 			}
 			_weatherRestoreBuffer.Clear();
 		}
@@ -1289,7 +1338,7 @@ namespace Gorillas.Game
 
 					for (int trail = 0; trail < 6; trail++)
 					{
-						SetWeatherPixel(positions[i] - direction * trail, rows[i], 220, 220, 220);
+						SetWeatherBlock(positions[i] - direction * trail, rows[i], 2, 220, 220, 220);
 					}
 				}
 
@@ -1302,7 +1351,7 @@ namespace Gorillas.Game
 		private async Task RunSnow(int durationMs, System.Threading.CancellationToken token)
 		{
 			var rand = new Random();
-			const int flakeCount = 25;
+			const int flakeCount = 60;
 			double[] flakeX = new double[flakeCount];
 			double[] flakeY = new double[flakeCount];
 			double[] flakeSpeed = new double[flakeCount];
@@ -1310,7 +1359,7 @@ namespace Gorillas.Game
 			{
 				flakeX[i] = rand.Next(0, ScrWidth);
 				flakeY[i] = rand.Next(0, ScrHeight);
-				flakeSpeed[i] = 0.5 + rand.NextDouble();
+				flakeSpeed[i] = 0.8 + rand.NextDouble() * 1.2;
 			}
 
 			var stopwatch = System.Diagnostics.Stopwatch.StartNew();
@@ -1329,7 +1378,7 @@ namespace Gorillas.Game
 					if (flakeX[i] < 0) flakeX[i] += ScrWidth;
 					if (flakeX[i] >= ScrWidth) flakeX[i] -= ScrWidth;
 
-					SetWeatherPixel((int)flakeX[i], (int)flakeY[i], 255, 255, 255);
+					SetWeatherBlock((int)flakeX[i], (int)flakeY[i], 3, 255, 255, 255);
 				}
 
 				try { await Task.Delay(70, token); } catch (OperationCanceledException) { break; }
@@ -1341,7 +1390,7 @@ namespace Gorillas.Game
 		private async Task RunRainStorm(int durationMs, System.Threading.CancellationToken token)
 		{
 			var rand = new Random();
-			const int dropCount = 30;
+			const int dropCount = 60;
 			double[] dropX = new double[dropCount];
 			double[] dropY = new double[dropCount];
 			int cloudY = Scl(12);
@@ -1364,11 +1413,12 @@ namespace Gorillas.Game
 
 				foreach (int cx in cloudX)
 				{
-					for (int dx = -8; dx <= 8; dx++)
-					{
-						SetWeatherPixel(cx + dx, cloudY, 100, 100, 100);
-						SetWeatherPixel(cx + dx, cloudY + 1, 100, 100, 100);
-					}
+					// Puffy blob made of overlapping filled circles instead of flat grey lines.
+					SetWeatherFilledCircle(cx, cloudY, 4, 105, 105, 105);
+					SetWeatherFilledCircle(cx - 7, cloudY + 1, 3, 100, 100, 100);
+					SetWeatherFilledCircle(cx + 7, cloudY + 1, 3, 100, 100, 100);
+					SetWeatherFilledCircle(cx - 3, cloudY - 2, 3, 110, 110, 110);
+					SetWeatherFilledCircle(cx + 3, cloudY - 2, 3, 110, 110, 110);
 				}
 
 				for (int i = 0; i < dropCount; i++)
@@ -1381,8 +1431,8 @@ namespace Gorillas.Game
 						dropX[i] = rand.Next(0, ScrWidth);
 					}
 
-					SetWeatherPixel((int)dropX[i], (int)dropY[i], 120, 160, 220);
-					SetWeatherPixel((int)dropX[i] - windDirection, (int)dropY[i] - 3, 120, 160, 220);
+					SetWeatherBlock((int)dropX[i], (int)dropY[i], 2, 120, 160, 220);
+					SetWeatherBlock((int)dropX[i] - windDirection, (int)dropY[i] - 3, 2, 120, 160, 220);
 				}
 
 				if (rand.Next(0, 40) == 0)
