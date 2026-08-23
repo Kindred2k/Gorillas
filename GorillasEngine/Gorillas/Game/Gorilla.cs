@@ -63,6 +63,15 @@ namespace Gorillas.Game
 
 		public bool CrtEffectEnabled => _crtEffectEnabled;
 
+		// Camera state driving the Banana Zoom modifier, read by Program's render loop.
+		private float _zoomFactor = 1f;
+		private float _zoomCenterX = 0.5f;
+		private float _zoomCenterY = 0.5f;
+
+		public float ZoomFactor => _zoomFactor;
+		public float ZoomCenterX => _zoomCenterX;
+		public float ZoomCenterY => _zoomCenterY;
+
 		private struct XYPoint
 		{
 			public int XCoor;
@@ -904,85 +913,110 @@ namespace Gorillas.Game
 			double startXPosition = startX + (playerNum == 2 ? Scl(25) : 0);
 			double startYPosition = startY - Scl(4) - 3;
 			int direction = playerNum == 2 ? Scl(4) : Scl(-4);
-			double time = 0;
-			byte[]? previousBananaBackground = null;
-			int previousBananaX = 0;
-			int previousBananaY = 0;
-			bool shotInSun = false;
-			bool leftThrower = false;
-			while (true)
+
+			async Task<int> FlightLoop()
 			{
+				double time = 0;
+				byte[]? previousBananaBackground = null;
+				int previousBananaX = 0;
+				int previousBananaY = 0;
+				bool shotInSun = false;
+				bool leftThrower = false;
+				while (true)
+				{
+					await Rest(20);
+					if (previousBananaBackground != null)
+					{
+						Utils.RestoreRegion(_pixelBuffer, ScrWidth, ScrHeight, previousBananaBackground, previousBananaX, previousBananaY);
+					}
+					double x = startXPosition + initialXVelocity * time + .5 * (Wind / 5.0) * time * time;
+					double y = startYPosition + (-initialYVelocity * time + .5 * gravity * time * time) * (ScrHeight / 350.0);
+
+					if (_bananaZoomEnabled)
+					{
+						_zoomCenterX = (float)Math.Clamp(x / ScrWidth, 0.0, 1.0);
+						_zoomCenterY = (float)Math.Clamp(y / ScrHeight, 0.0, 1.0);
+						_zoomFactor = Math.Min(_zoomFactor + 0.03f, 1.8f);
+					}
+
+					if (x >= ScrWidth - Scl(10) || x <= 3 || y >= ScrHeight - 3) return 0;
+
+					if (y > 0)
+					{
+						int checkX = (int)x + Scl(8 * (2 - playerNum));
+						int checkY = (int)y;
+						if (checkX < 0 || checkX >= ScrWidth || checkY < 0 || checkY >= ScrHeight)
+						{
+							time += .1;
+							continue;
+						}
+
+						int pixelIndex = (checkY * ScrWidth + checkX) * 4;
+						bool insideSunBounds = Math.Abs(ScrWidth / 2 - checkX) <= Scl(20) && checkY < SunHt;
+						var sunColor = _qBasic.GetColor(SUNATTR);
+						bool isSun = _pixelBuffer[pixelIndex] == sunColor.r
+							&& _pixelBuffer[pixelIndex + 1] == sunColor.g
+							&& _pixelBuffer[pixelIndex + 2] == sunColor.b;
+						if ((isSun || insideSunBounds) && checkY < SunHt)
+						{
+							DoSun(SUNSHOCK);
+							SunHit = 1;
+							shotInSun = true;
+						}
+						else if (shotInSun && !insideSunBounds)
+						{
+							shotInSun = false;
+						}
+
+						int hitGorilla = !shotInSun ? GetHitGorilla(checkX, checkY) : 0;
+						if (!leftThrower && !IsInsideGorillaBounds(x, y, playerNum))
+						{
+							leftThrower = true;
+						}
+						if (!leftThrower && hitGorilla == playerNum)
+						{
+							hitGorilla = 0;
+						}
+						if (hitGorilla != 0)
+						{
+							return await ExplodeGorilla(x, y, hitGorilla);
+						}
+
+						bool occupied = !shotInSun && IsCollidablePixel(pixelIndex);
+						if (occupied)
+						{
+							await DoExplosion(checkX, checkY);
+							return 0;
+						}
+
+						if (!shotInSun)
+						{
+							previousBananaX = Math.Clamp((int)x, 0, ScrWidth - 11);
+							previousBananaY = Math.Clamp((int)y, 0, ScrHeight - 7);
+							previousBananaBackground = Utils.CaptureRegion(_pixelBuffer, ScrWidth, ScrHeight, previousBananaX, previousBananaY, 11, 7);
+
+							// Slow the tumble to ~1 frame change per 4 steps, and reverse it when moving leftward.
+							double velocityX = initialXVelocity + Wind / 5.0 * time;
+							int rotationStep = (int)(time * 10) / 4 % 4;
+							int rotationFrame = velocityX >= 0 ? rotationStep : (4 - rotationStep) % 4;
+							DrawBan(x, y, rotationFrame, true);
+						}
+					}
+					time += .1;
+				}
+			}
+
+			int result = await FlightLoop();
+			await ZoomOutIfEnabled();
+			return result;
+		}
+
+		private async Task ZoomOutIfEnabled()
+		{
+			while (_zoomFactor > 1f)
+			{
+				_zoomFactor = Math.Max(1f, _zoomFactor - 0.08f);
 				await Rest(20);
-				if (previousBananaBackground != null)
-				{
-					Utils.RestoreRegion(_pixelBuffer, ScrWidth, ScrHeight, previousBananaBackground, previousBananaX, previousBananaY);
-				}
-				double x = startXPosition + initialXVelocity * time + .5 * (Wind / 5.0) * time * time;
-				double y = startYPosition + (-initialYVelocity * time + .5 * gravity * time * time) * (ScrHeight / 350.0);
-				if (x >= ScrWidth - Scl(10) || x <= 3 || y >= ScrHeight - 3) return 0;
-
-				if (y > 0)
-				{
-					int checkX = (int)x + Scl(8 * (2 - playerNum));
-					int checkY = (int)y;
-					if (checkX < 0 || checkX >= ScrWidth || checkY < 0 || checkY >= ScrHeight)
-					{
-						time += .1;
-						continue;
-					}
-
-					int pixelIndex = (checkY * ScrWidth + checkX) * 4;
-					bool insideSunBounds = Math.Abs(ScrWidth / 2 - checkX) <= Scl(20) && checkY < SunHt;
-					var sunColor = _qBasic.GetColor(SUNATTR);
-					bool isSun = _pixelBuffer[pixelIndex] == sunColor.r
-						&& _pixelBuffer[pixelIndex + 1] == sunColor.g
-						&& _pixelBuffer[pixelIndex + 2] == sunColor.b;
-					if ((isSun || insideSunBounds) && checkY < SunHt)
-					{
-						DoSun(SUNSHOCK);
-						SunHit = 1;
-						shotInSun = true;
-					}
-					else if (shotInSun && !insideSunBounds)
-					{
-						shotInSun = false;
-					}
-
-					int hitGorilla = !shotInSun ? GetHitGorilla(checkX, checkY) : 0;
-					if (!leftThrower && !IsInsideGorillaBounds(x, y, playerNum))
-					{
-						leftThrower = true;
-					}
-					if (!leftThrower && hitGorilla == playerNum)
-					{
-						hitGorilla = 0;
-					}
-					if (hitGorilla != 0)
-					{
-						return await ExplodeGorilla(x, y, hitGorilla);
-					}
-
-					bool occupied = !shotInSun && IsCollidablePixel(pixelIndex);
-					if (occupied)
-					{
-						await DoExplosion(checkX, checkY);
-						return 0;
-					}
-
-					if (!shotInSun)
-					{
-						previousBananaX = Math.Clamp((int)x, 0, ScrWidth - 11);
-						previousBananaY = Math.Clamp((int)y, 0, ScrHeight - 7);
-						previousBananaBackground = Utils.CaptureRegion(_pixelBuffer, ScrWidth, ScrHeight, previousBananaX, previousBananaY, 11, 7);
-
-						// Slow the tumble to ~1 frame change per 4 steps, and reverse it when moving leftward.
-						double velocityX = initialXVelocity + Wind / 5.0 * time;
-						int rotationStep = (int)(time * 10) / 4 % 4;
-						int rotationFrame = velocityX >= 0 ? rotationStep : (4 - rotationStep) % 4;
-						DrawBan(x, y, rotationFrame, true);
-					}
-				}
-				time += .1;
 			}
 		}
 

@@ -41,6 +41,8 @@ namespace PixelRenderer
 		private static uint vbo;
 		private static int textureLocation;
 		private static int crtEnabledLocation;
+		private static int zoomFactorLocation;
+		private static int zoomCenterLocation;
 		private static bool isFullscreen;
 		private static IKeyboard? keyboard;
 		private static Gorilla? _gorilla;
@@ -106,11 +108,14 @@ namespace PixelRenderer
 				in vec2 vTexCoord;
 				uniform sampler2D uTexture;
 				uniform int uCrtEnabled;
+				uniform float uZoomFactor;
+				uniform vec2 uZoomCenter;
 				const float screenHeight = 350.0;
 				void main()
 				{
 					vec2 uv = vec2(vTexCoord.x, 1.0 - vTexCoord.y);
-					vec4 color = texture(uTexture, uv);
+					vec2 zoomedUv = clamp((uv - uZoomCenter) / uZoomFactor + uZoomCenter, 0.0, 1.0);
+					vec4 color = texture(uTexture, zoomedUv);
 					if (uCrtEnabled != 0)
 					{
 						float line = fract(uv.y * screenHeight);
@@ -126,6 +131,8 @@ namespace PixelRenderer
 				""");
 			textureLocation = _gl.GetUniformLocation(shaderProgram, "uTexture");
 			crtEnabledLocation = _gl.GetUniformLocation(shaderProgram, "uCrtEnabled");
+			zoomFactorLocation = _gl.GetUniformLocation(shaderProgram, "uZoomFactor");
+			zoomCenterLocation = _gl.GetUniformLocation(shaderProgram, "uZoomCenter");
 
 			_gorilla = new Gorilla(_pixelBuffer, _screenWidth, _screenHeight, 9, _qBasic);
 			_gameTask = RunGameAsync();
@@ -186,6 +193,8 @@ namespace PixelRenderer
 			_gl.BindTexture(TextureTarget.Texture2D, textureId);
 			_gl.Uniform1(textureLocation, 0);
 			_gl.Uniform1(crtEnabledLocation, _gorilla?.CrtEffectEnabled == true ? 1 : 0);
+			_gl.Uniform1(zoomFactorLocation, _gorilla?.ZoomFactor ?? 1f);
+			_gl.Uniform2(zoomCenterLocation, _gorilla?.ZoomCenterX ?? 0.5f, _gorilla?.ZoomCenterY ?? 0.5f);
 			_gl.BindVertexArray(vao);
 			_gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
 			_gl.BindVertexArray(0);
