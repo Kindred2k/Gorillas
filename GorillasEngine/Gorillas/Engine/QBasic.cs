@@ -26,6 +26,7 @@ public unsafe class QBasic
 	private Device* _audioDevice;
 	private Context* _audioContextHandle;
 	private bool _audioUnavailable;
+	private readonly object _audioLock = new();
 
 	// Viewport settings
 	private int[] _textmodeViewportLineRange = new int[] { 1, 25 };
@@ -469,55 +470,76 @@ public unsafe class QBasic
 		}
 	}
 
-	public void PLAY(IEnumerable<(string Note, long DurationMs)> sequence)
+	public void PLAY(IEnumerable<(string Note, long DurationMs)> sequence, bool background = false)
 	{
 		if (_audioUnavailable)
 		{
 			return;
 		}
 
-		try
+		List<short> samples = new();
+		const int sampleRate = 44100;
+		foreach (var step in sequence)
 		{
-			List<short> samples = new();
-			const int sampleRate = 44100;
-			foreach (var step in sequence)
+			if (!_notes.TryGetValue(step.Note, out double frequency) || step.DurationMs <= 0)
 			{
-				if (!_notes.TryGetValue(step.Note, out double frequency) || step.DurationMs <= 0)
-				{
-					continue;
-				}
-
-				int sampleCount = (int)(sampleRate * step.DurationMs / 1000.0);
-				for (int sample = 0; sample < sampleCount; sample++)
-				{
-					double phase = sample * frequency / sampleRate;
-					samples.Add((short)(Math.Sin(phase * Math.PI * 2) >= 0 ? 5000 : -5000));
-				}
+				continue;
 			}
 
-			if (samples.Count == 0 || !TryInitializeAudio())
+			int sampleCount = (int)(sampleRate * step.DurationMs / 1000.0);
+			for (int sample = 0; sample < sampleCount; sample++)
 			{
-				return;
+				double phase = sample * frequency / sampleRate;
+				samples.Add((short)(Math.Sin(phase * Math.PI * 2) >= 0 ? 5000 : -5000));
 			}
-
-			uint buffer = _audio!.GenBuffer();
-			uint source = _audio.GenSource();
-			_audio.BufferData(buffer, BufferFormat.Mono16, samples.ToArray(), sampleRate);
-			_audio.SetSourceProperty(source, SourceInteger.Buffer, buffer);
-			_audio.SourcePlay(source);
-			_audio.GetSourceProperty(source, GetSourceInteger.SourceState, out int sourceState);
-			while ((SourceState)sourceState == SourceState.Playing)
-			{
-				Thread.Sleep(10);
-				_audio.GetSourceProperty(source, GetSourceInteger.SourceState, out sourceState);
-			}
-			_audio.SourceStop(source);
-			_audio.DeleteSource(source);
-			_audio.DeleteBuffer(buffer);
 		}
-		catch (Exception) when (OperatingSystem.IsMacOS() || OperatingSystem.IsLinux() || OperatingSystem.IsWindows())
+
+		if (samples.Count == 0)
 		{
-			_audioUnavailable = true;
+			return;
+		}
+
+		if (background)
+		{
+			_ = Task.Run(() => PlaySamples(samples));
+		}
+		else
+		{
+			PlaySamples(samples);
+		}
+	}
+
+	private void PlaySamples(List<short> samples)
+	{
+		// OpenAL calls are serialized since background playback can overlap with a later foreground call.
+		lock (_audioLock)
+		{
+			try
+			{
+				if (!TryInitializeAudio())
+				{
+					return;
+				}
+
+				uint buffer = _audio!.GenBuffer();
+				uint source = _audio.GenSource();
+				_audio.BufferData(buffer, BufferFormat.Mono16, samples.ToArray(), 44100);
+				_audio.SetSourceProperty(source, SourceInteger.Buffer, buffer);
+				_audio.SourcePlay(source);
+				_audio.GetSourceProperty(source, GetSourceInteger.SourceState, out int sourceState);
+				while ((SourceState)sourceState == SourceState.Playing)
+				{
+					Thread.Sleep(10);
+					_audio.GetSourceProperty(source, GetSourceInteger.SourceState, out sourceState);
+				}
+				_audio.SourceStop(source);
+				_audio.DeleteSource(source);
+				_audio.DeleteBuffer(buffer);
+			}
+			catch (Exception) when (OperatingSystem.IsMacOS() || OperatingSystem.IsLinux() || OperatingSystem.IsWindows())
+			{
+				_audioUnavailable = true;
+			}
 		}
 	}
 

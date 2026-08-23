@@ -56,6 +56,11 @@ namespace Gorillas.Game
 		private byte[]?[] GorillaBackgrounds = new byte[]?[2];
 		private byte[]? TextBackground;
 
+		// Admin Menu modifiers, persist for the lifetime of the process until toggled off.
+		private bool _crtEffectEnabled;
+		private bool _weatherEffectsEnabled;
+		private bool _bananaZoomEnabled;
+
 		private struct XYPoint
 		{
 			public int XCoor;
@@ -87,8 +92,10 @@ namespace Gorillas.Game
 			SunHt = mode == 9 ? 39 : 20;
 			GHeight = mode == 9 ? 25 : 12;
 			MachSpeed = 343.0f; // Speed of sound in m/s
-			LBan = CreateBananaSprite(false);
-			RBan = CreateBananaSprite(true);
+			LBan = CreateBananaSprite(0);
+			UBan = CreateBananaSprite(1);
+			DBan = CreateBananaSprite(2);
+			RBan = CreateBananaSprite(3);
 		}
 
 		/// <summary>
@@ -220,27 +227,39 @@ namespace Gorillas.Game
 
 			_qBasic.SCREEN(0);
 			MaxCol = 80;
-			_qBasic.PALETTE(0, 0);
-			_qBasic.COLOR(15);
-			_qBasic.CLS();
 
-			Center(4, "Q B a s i c    G O R I L L A S");
-
-			_qBasic.COLOR(7);
-			Center(6, "Copyright (C) Microsoft Corporation 1990");
-			Center(8, "Your mission is to hit your opponent with the exploding");
-			Center(9, "banana by varying the angle and power of your throw, taking");
-			Center(10, "into account wind speed, gravity, and the city skyline.");
-			Center(11, "The wind speed is shown by a directional arrow at the bottom");
-			Center(12, "of the playing field, its length relative to its strength.");
-			Center(24, "Press any key to continue");
-
-			_qBasic.PLAY(new[]
+			while (true)
 			{
-				("C", 125L), ("D", 125L), ("E", 125L), ("D", 125L),
-				("C", 125L), ("D", 125L), ("E", 250L), ("C", 250L)
-			});
-			await SparklePause();
+				_qBasic.PALETTE(0, 0);
+				_qBasic.COLOR(15);
+				_qBasic.CLS();
+
+				Center(4, "Q B a s i c    G O R I L L A S");
+
+				_qBasic.COLOR(7);
+				Center(6, "Copyright (C) Microsoft Corporation 1990");
+				Center(8, "Your mission is to hit your opponent with the exploding");
+				Center(9, "banana by varying the angle and power of your throw, taking");
+				Center(10, "into account wind speed, gravity, and the city skyline.");
+				Center(11, "The wind speed is shown by a directional arrow at the bottom");
+				Center(12, "of the playing field, its length relative to its strength.");
+				Center(24, "Press any key to continue");
+
+				_qBasic.PLAY(new[]
+				{
+					("C", 125L), ("D", 125L), ("E", 125L), ("D", 125L),
+					("C", 125L), ("D", 125L), ("E", 250L), ("C", 250L)
+				}, background: true);
+				char? key = await SparklePause();
+
+				if (key.HasValue && char.ToUpperInvariant(key.Value) == 'A')
+				{
+					await AdminMenu();
+					continue;
+				}
+
+				break;
+			}
 
 			if (Mode == 1)
 			{
@@ -248,7 +267,7 @@ namespace Gorillas.Game
 			}
 		}
 
-		private async Task SparklePause()
+		private async Task<char?> SparklePause()
 		{
 			const string sparkle = "*    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    *    ";
 
@@ -277,10 +296,66 @@ namespace Gorillas.Game
 					await Task.Delay(100);
 					if (keyTask.IsCompleted)
 					{
-						await keyTask;
-						return;
+						return await keyTask;
 					}
 				}
+			}
+		}
+
+		private async Task AdminMenu()
+		{
+			string[] labels = { "CRT rendering effect", "Weather effects", "Banana Zoom" };
+			const int promptRow = 20;
+			const int promptColumn = 20;
+			const string promptText = "Make a choice or type Q to return: ";
+
+			bool[] GetSelections() => new[] { _crtEffectEnabled, _weatherEffectsEnabled, _bananaZoomEnabled };
+
+			void SetSelection(int index, bool value)
+			{
+				switch (index)
+				{
+					case 0: _crtEffectEnabled = value; break;
+					case 1: _weatherEffectsEnabled = value; break;
+					case 2: _bananaZoomEnabled = value; break;
+				}
+			}
+
+			void Render()
+			{
+				_qBasic.PALETTE(0, 0);
+				_qBasic.COLOR(15);
+				_qBasic.CLS();
+				Center(4, "A D M I N   M E N U");
+
+				_qBasic.COLOR(7);
+				bool[] selections = GetSelections();
+				for (int i = 0; i < labels.Length; i++)
+				{
+					_qBasic.LOCATE(8 + i, 20);
+					_qBasic.PRINT($"{i + 1}. [{(selections[i] ? "X" : " ")}] {labels[i]}", true);
+				}
+			}
+
+			Render();
+			_qBasic.ClearPendingKeys();
+
+			while (true)
+			{
+				// Render prompt and typed value together so the proportional font can't overlap them.
+				string input = await Utils.ReadLineInput(_qBasic, promptRow, promptColumn, promptText, string.Empty, 10);
+
+				if (input.Equals("Q", StringComparison.OrdinalIgnoreCase))
+				{
+					return;
+				}
+
+				if (int.TryParse(input, out int choice) && choice >= 1 && choice <= labels.Length)
+				{
+					SetSelection(choice - 1, !GetSelections()[choice - 1]);
+				}
+
+				Render();
 			}
 		}
 
@@ -556,27 +631,12 @@ namespace Gorillas.Game
 			byte[]? banana = rotation switch
 			{
 				0 => LBan,
-				3 => RBan,
-				1 => RBan,
-				2 => LBan,
-				_ => null
-			};
-			_qBasic.PUT(banana, 11, 7, (int)x, (int)y, true);
-
-			/*
-			byte[]? banana = rotation switch
-			{
-				0 => LBan,
 				1 => UBan,
 				2 => DBan,
 				3 => RBan,
 				_ => null
 			};
-			if (banana != null)
-			{
-				_qBasic.PUT(banana, (int)x, (int)y, (int)x, (int)y);
-			}
-			*/
+			_qBasic.PUT(banana, 11, 7, (int)x, (int)y, true);
 		}
 
 		private void PutGorilla(byte[]? sprite, int x, int y)
@@ -584,32 +644,54 @@ namespace Gorillas.Game
 			_qBasic.PUT(sprite, Scl(29) + 1, Scl(29) + 1, x, y, true);
 		}
 
-		private byte[] CreateBananaSprite(bool right)
+		private byte[] CreateBananaSprite(int rotation)
 		{
 			const int width = 11;
 			const int height = 7;
 			byte[] sprite = new byte[width * height * 4];
-			string[] pixels = right
-				? new[] { "      ##   ", "     ####  ", "    ###### ", "     ##### ", "      ###  ", "       #   ", "           " }
-				: new[] { "   ##      ", "  ####     ", " ######    ", "  #####    ", "   ###     ", "    #      ", "           " };
 
-			for (int y = 0; y < height; y++)
+			// Fill a tapered crescent (thick middle, pointed tips) and rotate it 45 degrees per tumble frame.
+			double centerX = (width - 1) / 2.0;
+			double centerY = (height - 1) / 2.0;
+			double midRadius = 4.0;
+			double maxThickness = 2.6;
+			double sweepMax = 62;
+			double baseAngle = rotation * Math.PI / 4.0;
+
+			for (double sweep = -sweepMax; sweep <= sweepMax; sweep += 2)
 			{
-				for (int x = 0; x < width; x++)
-				{
-					if (pixels[y][x] != '#')
-					{
-						continue;
-					}
+				double sweepRad = sweep * Math.PI / 180.0;
+				double taper = Math.Cos(sweep / sweepMax * (Math.PI / 2.0));
+				double thickness = maxThickness * taper;
 
-					int index = (y * width + x) * 4;
-					sprite[index] = 252;
-					sprite[index + 1] = 252;
-					sprite[index + 2] = 84;
-					sprite[index + 3] = 255;
+				for (double offset = -thickness / 2; offset <= thickness / 2; offset += 0.5)
+				{
+					double radius = midRadius + offset;
+					double px = radius * Math.Cos(sweepRad);
+					double py = radius * Math.Sin(sweepRad) * 0.55; // flatten to fit the 7px height
+
+					double rx = px * Math.Cos(baseAngle) - py * Math.Sin(baseAngle);
+					double ry = px * Math.Sin(baseAngle) + py * Math.Cos(baseAngle);
+
+					SetBananaPixel(sprite, width, height, (int)Math.Round(centerX + rx), (int)Math.Round(centerY + ry));
 				}
 			}
+
 			return sprite;
+		}
+
+		private static void SetBananaPixel(byte[] sprite, int width, int height, int x, int y)
+		{
+			if (x < 0 || x >= width || y < 0 || y >= height)
+			{
+				return;
+			}
+
+			int index = (y * width + x) * 4;
+			sprite[index] = 252;
+			sprite[index + 1] = 252;
+			sprite[index + 2] = 84;
+			sprite[index + 3] = 255;
 		}
 
 		private async Task VictoryDance(int player)
@@ -642,7 +724,7 @@ namespace Gorillas.Game
 
 		private async Task DoExplosion(double x, double y)
 		{
-			_qBasic.PLAY(new[] { ("E", 50L), ("F", 50L), ("G", 50L), ("E", 50L), ("F", 50L), ("D", 50L), ("C", 50L) });
+			_qBasic.PLAY(new[] { ("E", 50L), ("F", 50L), ("G", 50L), ("E", 50L), ("F", 50L), ("D", 50L), ("C", 50L) }, background: true);
 			int radius = ScrHeight / 50;
 			float increment = Mode == 9 ? .5f : .41f;
 			for (float circleRadius = 0; circleRadius <= radius; circleRadius += increment)
@@ -890,7 +972,12 @@ namespace Gorillas.Game
 						previousBananaX = Math.Clamp((int)x, 0, ScrWidth - 11);
 						previousBananaY = Math.Clamp((int)y, 0, ScrHeight - 7);
 						previousBananaBackground = Utils.CaptureRegion(_pixelBuffer, ScrWidth, ScrHeight, previousBananaX, previousBananaY, 11, 7);
-						DrawBan(x, y, (int)(time * 10) % 4, true);
+
+						// Slow the tumble to ~1 frame change per 4 steps, and reverse it when moving leftward.
+						double velocityX = initialXVelocity + Wind / 5.0 * time;
+						int rotationStep = (int)(time * 10) / 4 % 4;
+						int rotationFrame = velocityX >= 0 ? rotationStep : (4 - rotationStep) % 4;
+						DrawBan(x, y, rotationFrame, true);
 					}
 				}
 				time += .1;
@@ -945,7 +1032,7 @@ namespace Gorillas.Game
 			int centerY = GorillaY[playerHit - 1] + Scl(12);
 			int maxRadius = Math.Max(1, (int)(24 * (ScrWidth / 320.0)));
 			var explosionColor = _qBasic.GetColor(ExplosionColor);
-			_qBasic.PLAY(new[] { ("E", 50L), ("F", 50L), ("G", 50L), ("E", 50L), ("F", 50L), ("D", 50L), ("C", 50L) });
+			_qBasic.PLAY(new[] { ("E", 50L), ("F", 50L), ("G", 50L), ("E", 50L), ("F", 50L), ("D", 50L), ("C", 50L) }, background: true);
 			for (int radius = 1; radius <= maxRadius; radius++)
 			{
 				Draw.DrawFilledCircle(_pixelBuffer, ScrWidth, ScrHeight, centerX, centerY, radius, explosionColor.r, explosionColor.g, explosionColor.b, 255);
