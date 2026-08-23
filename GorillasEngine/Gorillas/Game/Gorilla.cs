@@ -61,6 +61,8 @@ namespace Gorillas.Game
 		private bool _weatherEffectsEnabled;
 		private bool _bananaZoomEnabled;
 
+		public bool CrtEffectEnabled => _crtEffectEnabled;
+
 		private struct XYPoint
 		{
 			public int XCoor;

@@ -40,6 +40,7 @@ namespace PixelRenderer
 		private static uint vao;
 		private static uint vbo;
 		private static int textureLocation;
+		private static int crtEnabledLocation;
 		private static bool isFullscreen;
 		private static IKeyboard? keyboard;
 		private static Gorilla? _gorilla;
@@ -104,12 +105,27 @@ namespace PixelRenderer
 				out vec4 FragColor;
 				in vec2 vTexCoord;
 				uniform sampler2D uTexture;
+				uniform int uCrtEnabled;
+				const float screenHeight = 350.0;
 				void main()
 				{
-					FragColor = texture(uTexture, vec2(vTexCoord.x, 1.0 - vTexCoord.y));
+					vec2 uv = vec2(vTexCoord.x, 1.0 - vTexCoord.y);
+					vec4 color = texture(uTexture, uv);
+					if (uCrtEnabled != 0)
+					{
+						float line = fract(uv.y * screenHeight);
+						float scanline = smoothstep(0.0, 0.5, line) * smoothstep(1.0, 0.5, line);
+						color.rgb *= mix(0.65, 1.0, scanline);
+
+						vec2 vigUv = uv * (1.0 - uv);
+						float vig = clamp(pow(vigUv.x * vigUv.y * 18.0, 0.25), 0.0, 1.0);
+						color.rgb *= vig;
+					}
+					FragColor = color;
 				}
 				""");
 			textureLocation = _gl.GetUniformLocation(shaderProgram, "uTexture");
+			crtEnabledLocation = _gl.GetUniformLocation(shaderProgram, "uCrtEnabled");
 
 			_gorilla = new Gorilla(_pixelBuffer, _screenWidth, _screenHeight, 9, _qBasic);
 			_gameTask = RunGameAsync();
@@ -169,6 +185,7 @@ namespace PixelRenderer
 			_gl.ActiveTexture(TextureUnit.Texture0);
 			_gl.BindTexture(TextureTarget.Texture2D, textureId);
 			_gl.Uniform1(textureLocation, 0);
+			_gl.Uniform1(crtEnabledLocation, _gorilla?.CrtEffectEnabled == true ? 1 : 0);
 			_gl.BindVertexArray(vao);
 			_gl.DrawArrays(PrimitiveType.Triangles, 0, 6);
 			_gl.BindVertexArray(0);
