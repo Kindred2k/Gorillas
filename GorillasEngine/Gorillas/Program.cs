@@ -141,7 +141,8 @@ namespace PixelRenderer
 
 		private static void OnKeyDown(IKeyboard keyboard, Key key, int arg3)
 		{
-			QBasic.HandleKeyPressed(key);
+			bool shiftPressed = keyboard.IsKeyPressed(Key.ShiftLeft) || keyboard.IsKeyPressed(Key.ShiftRight);
+			QBasic.HandleKeyPressed(key, shiftPressed);
 
 			if (key == Key.F11 || (key == Key.Enter && (keyboard.IsKeyPressed(Key.AltLeft) || keyboard.IsKeyPressed(Key.AltRight))))
 			{

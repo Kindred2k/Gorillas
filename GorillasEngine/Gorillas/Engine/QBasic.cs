@@ -197,9 +197,9 @@ public unsafe class QBasic
 		}
 	}
 
-	public static void HandleKeyPressed(Key key)
+	public static void HandleKeyPressed(Key key, bool shiftPressed = false)
 	{
-		char? mappedKey = MapKeyToChar(key);
+		char? mappedKey = MapKeyToChar(key, shiftPressed);
 		if (!mappedKey.HasValue)
 		{
 			return;
@@ -228,9 +228,9 @@ public unsafe class QBasic
 		return !expectedKey.HasValue || value == expectedKey.Value;
 	}
 
-	private static char? MapKeyToChar(Key key)
+	private static char? MapKeyToChar(Key key, bool shiftPressed = false)
 	{
-		return key switch
+		char? mapped = key switch
 		{
 			Key.Space => ' ',
 			Key.Enter => '\n',
@@ -274,8 +274,15 @@ public unsafe class QBasic
 			Key.Number8 => '8',
 			Key.Number9 => '9',
 			Key.Period => '.',
-			_ => '\0'
+			_ => null
 		};
+
+		if (shiftPressed && mapped.HasValue && mapped.Value is >= 'a' and <= 'z')
+		{
+			return char.ToUpperInvariant(mapped.Value);
+		}
+
+		return mapped;
 	}
 
 	public void CIRCLE(bool step, int x, int y, int radius, int? color = null, float? start = null, float? end = null, float? aspect = null)
