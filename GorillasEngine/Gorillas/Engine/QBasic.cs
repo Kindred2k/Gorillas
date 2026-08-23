@@ -1,10 +1,10 @@
 using Silk.NET.Input;
-using NAudio.Wave;
-using NAudio.Wave.SampleProviders;
+using Silk.NET.OpenAL;
+using System.Runtime.InteropServices;
 
 namespace Gorillas.Engine;
 
-public class QBasic
+public unsafe class QBasic
 {
 	private static readonly object _waitKeyLock = new();
 	private static readonly Queue<char> _pendingKeys = new();
@@ -22,6 +22,11 @@ public class QBasic
 	private int _bufferWidth;
 	private int _bufferHeight;
 	private FontRenderer _fontRenderer;
+	private AL? _audio;
+	private ALContext? _audioContext;
+	private Device* _audioDevice;
+	private Context* _audioContextHandle;
+	private bool _audioUnavailable;
 
 	// Viewport settings
 	private int[] _textmodeViewportLineRange = new int[] { 1, 25 };
@@ -460,59 +465,82 @@ public class QBasic
 
 	public void PLAY(IEnumerable<(string Note, long DurationMs)> sequence)
 	{
-		var noteProviders = new List<ISampleProvider>();
-
-		foreach (var step in sequence)
-		{
-			if (step.DurationMs <= 0)
-			{
-				continue;
-			}
-
-			if (_notes.TryGetValue(step.Note, out double freq))
-			{
-				// QBasic traditionally used square waves for its internal speaker
-				var signal = new SignalGenerator(44100, 1)
-				{
-					Type = SignalGeneratorType.Square,
-					Frequency = freq,
-					Gain = 0.2 // Keep volume low to protect ears
-				}.Take(TimeSpan.FromMilliseconds(step.DurationMs));
-				noteProviders.Add(signal);
-			}
-		}
-
-		if (noteProviders.Count == 0)
+		if (_audioUnavailable)
 		{
 			return;
 		}
 
 		try
 		{
-			using WaveOutEvent outputDevice = new WaveOutEvent();
-			outputDevice.Init(new ConcatenatingSampleProvider(noteProviders));
-			outputDevice.Play();
+			List<short> samples = new();
+			const int sampleRate = 44100;
+			foreach (var step in sequence)
+			{
+				if (!_notes.TryGetValue(step.Note, out double frequency) || step.DurationMs <= 0)
+				{
+					continue;
+				}
 
-			while (outputDevice.PlaybackState == PlaybackState.Playing)
+				int sampleCount = (int)(sampleRate * step.DurationMs / 1000.0);
+				for (int sample = 0; sample < sampleCount; sample++)
+				{
+					double phase = sample * frequency / sampleRate;
+					samples.Add((short)(Math.Sin(phase * Math.PI * 2) >= 0 ? 5000 : -5000));
+				}
+			}
+
+			if (samples.Count == 0 || !TryInitializeAudio())
+			{
+				return;
+			}
+
+			uint buffer = _audio!.GenBuffer();
+			uint source = _audio.GenSource();
+			_audio.BufferData(buffer, BufferFormat.Mono16, samples.ToArray(), sampleRate);
+			_audio.SetSourceProperty(source, SourceInteger.Buffer, buffer);
+			_audio.SourcePlay(source);
+			_audio.GetSourceProperty(source, GetSourceInteger.SourceState, out int sourceState);
+			while ((SourceState)sourceState == SourceState.Playing)
 			{
 				Thread.Sleep(10);
+				_audio.GetSourceProperty(source, GetSourceInteger.SourceState, out sourceState);
 			}
+			_audio.SourceStop(source);
+			_audio.DeleteSource(source);
+			_audio.DeleteBuffer(buffer);
 		}
-		catch (DllNotFoundException)
+		catch (Exception) when (OperatingSystem.IsMacOS() || OperatingSystem.IsLinux() || OperatingSystem.IsWindows())
 		{
-			// The Windows waveOut backend is unavailable on macOS and Linux.
+			_audioUnavailable = true;
 		}
-		catch (EntryPointNotFoundException)
+	}
+
+	private bool TryInitializeAudio()
+	{
+		if (_audio != null)
 		{
-			// The installed native audio backend does not expose waveOut.
+			return true;
 		}
-		catch (PlatformNotSupportedException)
+
+		try
 		{
-			// Audio is optional; continue the game without playback.
+			_audio = AL.GetApi();
+			_audioContext = ALContext.GetApi();
+			_audioDevice = _audioContext.OpenDevice(null);
+			if (_audioDevice == null)
+			{
+				_audioUnavailable = true;
+				return false;
+			}
+
+			_audioContextHandle = _audioContext.CreateContext(_audioDevice, null);
+			_audioContext.MakeContextCurrent(_audioContextHandle);
+			return _audioContextHandle != null;
 		}
-		catch (Exception) when (OperatingSystem.IsMacOS() || OperatingSystem.IsLinux())
+		catch (Exception)
 		{
-			// Native audio backends are optional on non-Windows platforms.
+			_audioUnavailable = true;
+			return false;
 		}
 	}
 
