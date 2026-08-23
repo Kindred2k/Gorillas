@@ -159,7 +159,7 @@ public unsafe class QBasic
 		return new Tuple<int, int>(pixelX, pixelY);
 	}
 
-	public Task<char?> WAITKEY(char? expectedKey = null)
+	public Task<char?> WAITKEY(char? expectedKey = null, CancellationToken cancellationToken = default)
 	{
 		lock (_waitKeyLock)
 		{
@@ -175,6 +175,23 @@ public unsafe class QBasic
 			var tcs = new TaskCompletionSource<char?>(TaskCreationOptions.RunContinuationsAsynchronously);
 			_waitKeyTcs = tcs;
 			_expectedWaitKey = expectedKey;
+
+			if (cancellationToken.CanBeCanceled)
+			{
+				cancellationToken.Register(() =>
+				{
+					lock (_waitKeyLock)
+					{
+						if (_waitKeyTcs == tcs)
+						{
+							_waitKeyTcs = null;
+							_expectedWaitKey = null;
+						}
+					}
+					tcs.TrySetCanceled(cancellationToken);
+				});
+			}
+
 			return tcs.Task;
 		}
 	}

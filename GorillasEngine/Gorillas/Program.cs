@@ -47,6 +47,8 @@ namespace PixelRenderer
 		private static IKeyboard? keyboard;
 		private static Gorilla? _gorilla;
 		private static Task? _gameTask;
+		private static System.Threading.CancellationTokenSource? _gameplayCts;
+		private static bool _inGameplay;
 
 		static void Main(string[] args)
 		{
@@ -151,9 +153,27 @@ namespace PixelRenderer
 			while (true)
 			{
 				await _gorilla.Intro();
-				var inputs = await _gorilla.GetInputs();
-				await _gorilla.GorillaIntro(inputs.Player1, inputs.Player2);
-				await _gorilla.PlayGame(inputs.Player1, inputs.Player2, inputs.NumGames);
+
+				_gameplayCts = new System.Threading.CancellationTokenSource();
+				_gorilla.BeginGameplay(_gameplayCts.Token);
+				_inGameplay = true;
+				try
+				{
+					var inputs = await _gorilla.GetInputs();
+					await _gorilla.GorillaIntro(inputs.Player1, inputs.Player2);
+					await _gorilla.PlayGame(inputs.Player1, inputs.Player2, inputs.NumGames);
+				}
+				catch (OperationCanceledException)
+				{
+					// Escape was pressed during gameplay; fall through and redisplay the title screen.
+				}
+				finally
+				{
+					_inGameplay = false;
+					_gorilla.EndGameplay();
+					_gameplayCts.Dispose();
+					_gameplayCts = null;
+				}
 			}
 		}
 
@@ -174,8 +194,15 @@ namespace PixelRenderer
 			}
 			else if (key == Key.Escape)
 			{
-				// TODO: Implement a proper exit mechanism for the application. Show a menu?
-				_window!.Close();
+				if (_inGameplay)
+				{
+					// Unwind the current game back to the title screen instead of quitting outright.
+					_gameplayCts?.Cancel();
+				}
+				else
+				{
+					_window!.Close();
+				}
 			}
 		}
 

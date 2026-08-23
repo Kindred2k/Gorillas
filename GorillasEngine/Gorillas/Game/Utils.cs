@@ -54,7 +54,7 @@ internal static class Utils
 		}
 	}
 
-	public static async Task<string> ReadLineInput(QBasic qBasic, int row, int column, string prompt, string defaultValue, int maxLength)
+	public static async Task<string> ReadLineInput(QBasic qBasic, int row, int column, string prompt, string defaultValue, int maxLength, CancellationToken cancellationToken = default)
 	{
 		string result = string.Empty;
 		int x = (column - 1) * qBasic.CharWidth;
@@ -67,7 +67,7 @@ internal static class Utils
 			qBasic.LOCATE(row, column);
 			RestoreRegion(qBasic.PixelBuffer, qBasic.BufferWidth, qBasic.BufferHeight, background, x, y, width, qBasic.CharHeight);
 			qBasic.PRINT(prompt + result.PadRight(maxLength));
-			char? key = await qBasic.WAITKEY();
+			char? key = await qBasic.WAITKEY(cancellationToken: cancellationToken);
 			if (key == '\n')
 			{
 				return result.Length == 0 ? defaultValue : result;
@@ -88,7 +88,7 @@ internal static class Utils
 		}
 	}
 
-	public static async Task<string> ReadNumericInput(QBasic qBasic, int row, int column, string prompt, int clearLength, bool allowDecimal)
+	public static async Task<string> ReadNumericInput(QBasic qBasic, int row, int column, string prompt, int clearLength, bool allowDecimal, CancellationToken cancellationToken = default)
 	{
 		string result = string.Empty;
 		int x = (column - 1) * qBasic.CharWidth;
@@ -102,7 +102,7 @@ internal static class Utils
 			RestoreRegion(qBasic.PixelBuffer, qBasic.BufferWidth, qBasic.BufferHeight, background, x, y, width, qBasic.CharHeight);
 			qBasic.PRINT(prompt + result.PadRight(clearLength));
 
-			char? key = await qBasic.WAITKEY();
+			char? key = await qBasic.WAITKEY(cancellationToken: cancellationToken);
 			if (key == '\n')
 			{
 				return result;

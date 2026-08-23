@@ -72,6 +72,24 @@ namespace Gorillas.Game
 		public float ZoomCenterX => _zoomCenterX;
 		public float ZoomCenterY => _zoomCenterY;
 
+		// Weather overlay state; tracks pixels drawn last frame so they can be restored before the next frame.
+		private readonly List<(int x, int y, byte r, byte g, byte b, byte a)> _weatherRestoreBuffer = new();
+		private System.Threading.CancellationTokenSource? _weatherCts;
+		private Task? _weatherTask;
+
+		// Set by Program while gameplay (post-title-screen) is active, so Escape can unwind back to the title screen.
+		private CancellationToken _gameplayToken = CancellationToken.None;
+
+		public void BeginGameplay(CancellationToken cancellationToken)
+		{
+			_gameplayToken = cancellationToken;
+		}
+
+		public void EndGameplay()
+		{
+			_gameplayToken = CancellationToken.None;
+		}
+
 		private struct XYPoint
 		{
 			public int XCoor;
@@ -376,15 +394,15 @@ namespace Gorillas.Game
 			_qBasic.CLS();
 
 			_qBasic.ClearPendingKeys();
-			string player1 = await Utils.ReadLineInput(_qBasic, 8, 15, "Name of Player 1 (Default = 'Player 1'): ", "Player 1", 10);
-			string player2 = await Utils.ReadLineInput(_qBasic, 10, 15, "Name of Player 2 (Default = 'Player 2'): ", "Player 2", 10);
+			string player1 = await Utils.ReadLineInput(_qBasic, 8, 15, "Name of Player 1 (Default = 'Player 1'): ", "Player 1", 10, _gameplayToken);
+			string player2 = await Utils.ReadLineInput(_qBasic, 10, 15, "Name of Player 2 (Default = 'Player 2'): ", "Player 2", 10, _gameplayToken);
 
 			int numGames;
 			while (true)
 			{
 				_qBasic.LOCATE(12, 56);
 				_qBasic.PRINT(new string(' ', 25));
-				string game = await Utils.ReadNumericInput(_qBasic, 12, 13, "Play to how many total points (Default = 3)", 2, false);
+				string game = await Utils.ReadNumericInput(_qBasic, 12, 13, "Play to how many total points (Default = 3)", 2, false, _gameplayToken);
 				if (game.Length == 0)
 				{
 					numGames = 3;
@@ -401,7 +419,7 @@ namespace Gorillas.Game
 			{
 				_qBasic.LOCATE(14, 53);
 				_qBasic.PRINT(new string(' ', 28));
-				string gravityInput = await Utils.ReadNumericInput(_qBasic, 14, 17, "Gravity in Meters/Sec (Earth = 9.8)", 28, true);
+				string gravityInput = await Utils.ReadNumericInput(_qBasic, 14, 17, "Gravity in Meters/Sec (Earth = 9.8)", 28, true, _gameplayToken);
 				if (gravityInput.Length == 0)
 				{
 					gravity = 9.8;
@@ -519,7 +537,7 @@ namespace Gorillas.Game
 			_qBasic.PRINT("Your Choice?");
 
 			// Accept input from user to either view the intro or play the game
-			char? input = await _qBasic.WAITKEY();
+			char? input = await _qBasic.WAITKEY(cancellationToken: _gameplayToken);
 
 			_qBasic.SCREEN(Mode);
 			SetScreen();
@@ -599,7 +617,7 @@ namespace Gorillas.Game
 
 		private async Task Rest(int milliseconds)
 		{
-			await Task.Delay(milliseconds);
+			await Task.Delay(milliseconds, _gameplayToken);
 		}
 
 		private float CalcDelay()
@@ -838,7 +856,7 @@ namespace Gorillas.Game
 		{
 			while (true)
 			{
-				string result = await Utils.ReadNumericInput(_qBasic, row, column, string.Empty, 12, true);
+				string result = await Utils.ReadNumericInput(_qBasic, row, column, string.Empty, 12, true, _gameplayToken);
 				if (result.Length == 0)
 				{
 					return 0;
@@ -1086,31 +1104,39 @@ namespace Gorillas.Game
 		public async Task PlayGame(string player1, string player2, int numGames)
 		{
 			Array.Clear(TotalWins);
-			for (int game = 1; game <= numGames; game++)
+			try
 			{
-				_qBasic.CLS();
-				MakeCityScape(BuildingCoordinates);
-				PlaceGorillas(BuildingCoordinates);
-				DoSun(SUNHAPPY);
-				_qBasic.COLOR(7);
-				TextBackground = Utils.CaptureRegion(_qBasic.PixelBuffer, ScrWidth, ScrHeight, 0, 0, ScrWidth, _qBasic.CharHeight * 4);
-				int playerHit = 0;
-				int tosser = 2;
-				while (playerHit == 0)
+				for (int game = 1; game <= numGames; game++)
 				{
-					tosser = 3 - tosser;
-					_qBasic.LOCATE(1, 1);
-					_qBasic.PRINT(player1);
-					_qBasic.LOCATE(1, MaxCol - 1 - player2.Length);
-					_qBasic.PRINT(player2);
-					Center(23, $"{TotalWins[0]} >Score< {TotalWins[1]}");
-					playerHit = await DoShot(tosser, GorillaX[tosser - 1], GorillaY[tosser - 1]);
-					if (playerHit != 0)
+					_qBasic.CLS();
+					MakeCityScape(BuildingCoordinates);
+					PlaceGorillas(BuildingCoordinates);
+					DoSun(SUNHAPPY);
+					StartWeather();
+					_qBasic.COLOR(7);
+					TextBackground = Utils.CaptureRegion(_qBasic.PixelBuffer, ScrWidth, ScrHeight, 0, 0, ScrWidth, _qBasic.CharHeight * 4);
+					int playerHit = 0;
+					int tosser = 2;
+					while (playerHit == 0)
 					{
-						UpdateScores(tosser, playerHit == tosser ? HITSELF : 0);
+						tosser = 3 - tosser;
+						_qBasic.LOCATE(1, 1);
+						_qBasic.PRINT(player1);
+						_qBasic.LOCATE(1, MaxCol - 1 - player2.Length);
+						_qBasic.PRINT(player2);
+						Center(23, $"{TotalWins[0]} >Score< {TotalWins[1]}");
+						playerHit = await DoShot(tosser, GorillaX[tosser - 1], GorillaY[tosser - 1]);
+						if (playerHit != 0)
+						{
+							UpdateScores(tosser, playerHit == tosser ? HITSELF : 0);
+						}
 					}
+					await Rest(1000);
 				}
-				await Rest(1000);
+			}
+			finally
+			{
+				StopWeather();
 			}
 
 			_qBasic.SCREEN(0);
@@ -1161,6 +1187,217 @@ namespace Gorillas.Game
 		private int FnRan(int x)
 		{
 			return new Random().Next(1, x);
+		}
+
+		private void StartWeather()
+		{
+			StopWeather();
+			if (!_weatherEffectsEnabled)
+			{
+				return;
+			}
+
+			_weatherCts = new System.Threading.CancellationTokenSource();
+			_weatherTask = WeatherLoop(_weatherCts.Token);
+		}
+
+		private void StopWeather()
+		{
+			_weatherCts?.Cancel();
+			_weatherCts = null;
+			_weatherTask = null;
+			RestoreWeatherPixels();
+		}
+
+		private async Task WeatherLoop(System.Threading.CancellationToken token)
+		{
+			var rand = new Random();
+			try
+			{
+				while (!token.IsCancellationRequested)
+				{
+					try
+					{
+						await Task.Delay(rand.Next(3000, 10000), token);
+					}
+					catch (OperationCanceledException)
+					{
+						break;
+					}
+
+					int durationMs = rand.Next(3000, 8000);
+					switch (rand.Next(3))
+					{
+						case 0: await RunWindGust(durationMs, token); break;
+						case 1: await RunSnow(durationMs, token); break;
+						default: await RunRainStorm(durationMs, token); break;
+					}
+				}
+			}
+			catch (OperationCanceledException)
+			{
+				// Weather stopped between rounds; nothing left to clean up here.
+			}
+		}
+
+		private void SetWeatherPixel(int x, int y, byte r, byte g, byte b)
+		{
+			if (x < 0 || x >= ScrWidth || y < 0 || y >= ScrHeight)
+			{
+				return;
+			}
+
+			int index = (y * ScrWidth + x) * 4;
+			_weatherRestoreBuffer.Add((x, y, _pixelBuffer[index], _pixelBuffer[index + 1], _pixelBuffer[index + 2], _pixelBuffer[index + 3]));
+			_pixelBuffer[index] = r;
+			_pixelBuffer[index + 1] = g;
+			_pixelBuffer[index + 2] = b;
+			_pixelBuffer[index + 3] = 255;
+		}
+
+		private void RestoreWeatherPixels()
+		{
+			foreach (var pixel in _weatherRestoreBuffer)
+			{
+				Draw.DrawPixel(_pixelBuffer, pixel.x, pixel.y, ScrWidth, ScrHeight, pixel.r, pixel.g, pixel.b, pixel.a);
+			}
+			_weatherRestoreBuffer.Clear();
+		}
+
+		private async Task RunWindGust(int durationMs, System.Threading.CancellationToken token)
+		{
+			var rand = new Random();
+			int direction = Wind >= 0 ? 1 : -1;
+			const int lineCount = 6;
+			int[] positions = new int[lineCount];
+			int[] rows = new int[lineCount];
+			for (int i = 0; i < lineCount; i++)
+			{
+				positions[i] = rand.Next(0, ScrWidth);
+				rows[i] = rand.Next(20, ScrHeight - 20);
+			}
+
+			var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+			while (stopwatch.ElapsedMilliseconds < durationMs && !token.IsCancellationRequested)
+			{
+				RestoreWeatherPixels();
+				for (int i = 0; i < lineCount; i++)
+				{
+					positions[i] += direction * 4;
+					if (positions[i] < -10) positions[i] = ScrWidth + 10;
+					if (positions[i] > ScrWidth + 10) positions[i] = -10;
+
+					for (int trail = 0; trail < 6; trail++)
+					{
+						SetWeatherPixel(positions[i] - direction * trail, rows[i], 220, 220, 220);
+					}
+				}
+
+				try { await Task.Delay(60, token); } catch (OperationCanceledException) { break; }
+			}
+
+			RestoreWeatherPixels();
+		}
+
+		private async Task RunSnow(int durationMs, System.Threading.CancellationToken token)
+		{
+			var rand = new Random();
+			const int flakeCount = 25;
+			double[] flakeX = new double[flakeCount];
+			double[] flakeY = new double[flakeCount];
+			double[] flakeSpeed = new double[flakeCount];
+			for (int i = 0; i < flakeCount; i++)
+			{
+				flakeX[i] = rand.Next(0, ScrWidth);
+				flakeY[i] = rand.Next(0, ScrHeight);
+				flakeSpeed[i] = 0.5 + rand.NextDouble();
+			}
+
+			var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+			while (stopwatch.ElapsedMilliseconds < durationMs && !token.IsCancellationRequested)
+			{
+				RestoreWeatherPixels();
+				for (int i = 0; i < flakeCount; i++)
+				{
+					flakeY[i] += flakeSpeed[i];
+					flakeX[i] += Wind / 20.0;
+					if (flakeY[i] >= ScrHeight)
+					{
+						flakeY[i] = 0;
+						flakeX[i] = rand.Next(0, ScrWidth);
+					}
+					if (flakeX[i] < 0) flakeX[i] += ScrWidth;
+					if (flakeX[i] >= ScrWidth) flakeX[i] -= ScrWidth;
+
+					SetWeatherPixel((int)flakeX[i], (int)flakeY[i], 255, 255, 255);
+				}
+
+				try { await Task.Delay(70, token); } catch (OperationCanceledException) { break; }
+			}
+
+			RestoreWeatherPixels();
+		}
+
+		private async Task RunRainStorm(int durationMs, System.Threading.CancellationToken token)
+		{
+			var rand = new Random();
+			const int dropCount = 30;
+			double[] dropX = new double[dropCount];
+			double[] dropY = new double[dropCount];
+			int cloudY = Scl(12);
+			int[] cloudX = new int[4];
+			for (int i = 0; i < cloudX.Length; i++)
+			{
+				cloudX[i] = rand.Next(20, ScrWidth - 20);
+			}
+			for (int i = 0; i < dropCount; i++)
+			{
+				dropX[i] = rand.Next(0, ScrWidth);
+				dropY[i] = rand.Next(cloudY, ScrHeight);
+			}
+
+			int windDirection = Math.Sign(Wind);
+			var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+			while (stopwatch.ElapsedMilliseconds < durationMs && !token.IsCancellationRequested)
+			{
+				RestoreWeatherPixels();
+
+				foreach (int cx in cloudX)
+				{
+					for (int dx = -8; dx <= 8; dx++)
+					{
+						SetWeatherPixel(cx + dx, cloudY, 100, 100, 100);
+						SetWeatherPixel(cx + dx, cloudY + 1, 100, 100, 100);
+					}
+				}
+
+				for (int i = 0; i < dropCount; i++)
+				{
+					dropY[i] += 6;
+					dropX[i] += windDirection * 1.5;
+					if (dropY[i] >= ScrHeight)
+					{
+						dropY[i] = cloudY;
+						dropX[i] = rand.Next(0, ScrWidth);
+					}
+
+					SetWeatherPixel((int)dropX[i], (int)dropY[i], 120, 160, 220);
+					SetWeatherPixel((int)dropX[i] - windDirection, (int)dropY[i] - 3, 120, 160, 220);
+				}
+
+				if (rand.Next(0, 40) == 0)
+				{
+					int flashX = rand.Next(20, ScrWidth - 20);
+					for (int fy = cloudY; fy < ScrHeight - 20; fy += 2)
+					{
+						SetWeatherPixel(flashX + rand.Next(-2, 3), fy, 255, 255, 200);
+					}
+				}
+
+				try { await Task.Delay(50, token); } catch (OperationCanceledException) { break; }
+			}
+
+			RestoreWeatherPixels();
 		}
 	}
 }
