@@ -43,9 +43,9 @@ namespace Gorillas.Engine
 					int index = (rowOffset + x) * 4;
 
 					// Adjust order (e.g., r, g, b, a) based on your specific format
-					frameBuffer[index] = b; // Blue
+					frameBuffer[index] = r;
 					frameBuffer[index + 1] = g; // Green
-					frameBuffer[index + 2] = r; // Red
+					frameBuffer[index + 2] = b;
 					frameBuffer[index + 3] = a; // Alpha
 				}
 			}
@@ -132,37 +132,35 @@ namespace Gorillas.Engine
 				// Bounds checking before writing to the raw array
 				if (px >= 0 && px < bufferWidth && py >= 0 && py < bufferHeight)
 				{
-					frameBuffer[py * bufferWidth + px] = (byte)((color >> 24) & 0xFF);
-					frameBuffer[py * bufferWidth + px + 1 ] = (byte)((color >> 16) & 0xFF);
-					frameBuffer[py * bufferWidth + px + 2 ] = (byte)((color >> 8) & 0xFF);
-					frameBuffer[py * bufferWidth + px + 3 ] = (byte)((color >> 0) & 0xFF);
+					int index = (py * bufferWidth + px) * 4;
+					frameBuffer[index] = (byte)((color >> 24) & 0xFF);
+					frameBuffer[index + 1] = (byte)((color >> 16) & 0xFF);
+					frameBuffer[index + 2] = (byte)((color >> 8) & 0xFF);
+					frameBuffer[index + 3] = (byte)(color & 0xFF);
 				}
 			}
 		}
 
 		public static void DrawFilledCircle(byte[] frameBuffer, int bufferWidth, int bufferHeight, int xc, int yc, int radius, byte r, byte g, byte b, byte a)
 		{
-			int x = 0;
-			int y = radius;
-			int d = 3 - 2 * radius;
-
-			while (y >= x)
+			for (int y = -radius; y <= radius; y++)
 			{
-				// Draw the circle in all 8 octants
-				PlotCirclePoints(frameBuffer, bufferWidth, bufferHeight, xc, yc, x, y, r, g, b, a);
-				PlotCirclePoints(frameBuffer, bufferWidth, bufferHeight, xc, yc, y, x, r, g, b, a);
-
-				if (d <= 0)
+				int halfWidth = (int)Math.Sqrt(radius * radius - y * y);
+				for (int x = -halfWidth; x <= halfWidth; x++)
 				{
-					d = d + 4 * x + 6;
-				}
-				else
-				{
-					d = d + 4 * (x - y) + 10;
-					y--;
-				}
+					int pixelX = xc + x;
+					int pixelY = yc + y;
+					if (pixelX < 0 || pixelX >= bufferWidth || pixelY < 0 || pixelY >= bufferHeight)
+					{
+						continue;
+					}
 
-				x++;
+					int index = (pixelY * bufferWidth + pixelX) * 4;
+					frameBuffer[index] = r;
+					frameBuffer[index + 1] = g;
+					frameBuffer[index + 2] = b;
+					frameBuffer[index + 3] = a;
+				}
 			}
 		}
 
@@ -170,7 +168,7 @@ namespace Gorillas.Engine
 		{
 			// Array of 8 symmetric points
 			int[] px = { xc + x, xc - x, xc + x, xc - x, xc + y, xc - y, xc + y, xc - y };
-			int[] py = { yc + y, yc + y, yc - y, yc - y, xc + x, xc + x, xc - x, xc - x };
+			int[] py = { yc + y, yc + y, yc - y, yc - y, yc + x, yc + x, yc - x, yc - x };
 
 			for (int i = 0; i < 8; i++)
 			{
@@ -179,9 +177,9 @@ namespace Gorillas.Engine
 				{
 					// Calculate byte index for RGBA
 					int index = (py[i] * bufferWidth + px[i]) * 4;
-					frameBuffer[index] = b;     // Red
-					frameBuffer[index + 1] = g; // Green
-					frameBuffer[index + 2] = r; // Blue
+					frameBuffer[index] = r;
+					frameBuffer[index + 1] = g;
+					frameBuffer[index + 2] = b;
 					frameBuffer[index + 3] = a; // Alpha
 				}
 			}
@@ -192,9 +190,9 @@ namespace Gorillas.Engine
 			if (x >= 0 && x < bufferWidth && y >= 0 && y < bufferHeight)
 			{
 				int index = (y * bufferWidth + x) * 4;
-				buffer[index] = b;
+				buffer[index] = r;
 				buffer[index + 1] = g;
-				buffer[index + 2] = r;
+				buffer[index + 2] = b;
 				buffer[index + 3] = a;
 			}
 		}
@@ -253,10 +251,10 @@ namespace Gorillas.Engine
 				if (x >= 0 && x < bufferWidth && y >= 0 && y < bufferHeight)
 				{
 					// Map 2D coordinates to the 1D flat pixel array
-					int index = y * bufferWidth + x;
-					buffer[index] = b;
+					int index = (y * bufferWidth + x) * 4;
+					buffer[index] = r;
 					buffer[index + 1] = g;
-					buffer[index + 2] = r;
+					buffer[index + 2] = b;
 					buffer[index + 3] = a;
 				}
 			}

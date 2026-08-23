@@ -113,6 +113,9 @@ namespace PixelRenderer
 
 			_gorilla = new Gorilla(_pixelBuffer, _screenWidth, _screenHeight, 9, _qBasic);
 			_gameTask = RunGameAsync();
+			_gameTask.ContinueWith(
+				task => Console.Error.WriteLine($"Gorilla game stopped: {task.Exception?.GetBaseException()}"),
+				TaskContinuationOptions.OnlyOnFaulted);
 		}
 
 		private static async Task RunGameAsync()
@@ -122,10 +125,13 @@ namespace PixelRenderer
 				return;
 			}
 
-			await _gorilla.Intro();
-			var inputs = await _gorilla.GetInputs();
-			await _gorilla.GorillaIntro(inputs.Player1, inputs.Player2);
-			await _gorilla.PlayGame(inputs.Player1, inputs.Player2, inputs.NumGames);
+			while (true)
+			{
+				await _gorilla.Intro();
+				var inputs = await _gorilla.GetInputs();
+				await _gorilla.GorillaIntro(inputs.Player1, inputs.Player2);
+				await _gorilla.PlayGame(inputs.Player1, inputs.Player2, inputs.NumGames);
+			}
 		}
 
 		private static void OnUpdate(double deltaTime)

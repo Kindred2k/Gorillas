@@ -94,7 +94,6 @@ namespace Gorillas.Engine
 
             //Clear();
             RenderTextToBuffer(text, startX, startY, r, g, b, a);
-            UploadTexture();
         }
 
         public unsafe void UploadTexture()

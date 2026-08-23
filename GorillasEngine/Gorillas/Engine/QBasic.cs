@@ -124,7 +124,14 @@ public class QBasic
 
 	public void CLS()
 	{
-		Draw.FillBuffer(_pixelBuffer, 0, 0, 0, 255);
+		var backgroundColor = GetCurrentColor(0);
+		Draw.FillBuffer(_pixelBuffer, backgroundColor.r, backgroundColor.g, backgroundColor.b, 255);
+	}
+
+	public void ClearRegion(int x, int y, int width, int height)
+	{
+		var backgroundColor = GetCurrentColor(0);
+		Draw.DrawFilledRectangle(_pixelBuffer, _bufferWidth, _bufferHeight, x, y, width, height, backgroundColor.r, backgroundColor.g, backgroundColor.b, 255);
 	}
 
 	public void SetPixelBuffer(byte[] pixelBuffer, int bufferWidth, int bufferHeight)
@@ -133,6 +140,12 @@ public class QBasic
 		_bufferWidth = bufferWidth;
 		_bufferHeight = bufferHeight;
 	}
+
+	public byte[] PixelBuffer => _pixelBuffer;
+	public int BufferWidth => _bufferWidth;
+	public int BufferHeight => _bufferHeight;
+	public int CharWidth => _charWidth;
+	public int CharHeight => _charHeight;
 
 	public Tuple<int, int> TranslateRowColToPixel(int row, int col)
 	{
@@ -257,7 +270,7 @@ public class QBasic
 			Key.Number8 => '8',
 			Key.Number9 => '9',
 			Key.Period => '.',
-			_ => null
+			_ => '\0'
 		};
 	}
 
@@ -265,19 +278,27 @@ public class QBasic
 	{
 		int drawColor = color ?? _color;
 
-		if (start != null && end != null && aspect != null)
+		if (start != null && end != null)
 		{
-			Draw.DrawQBasicCircle(_pixelBuffer, _bufferWidth, _bufferHeight, step, x, y, radius, drawColor, start.Value, end.Value, aspect.Value);
+			var circleColor = GetCurrentColor(drawColor);
+			int packedColor = circleColor.r << 24 | circleColor.g << 16 | circleColor.b << 8 | 255;
+			Draw.DrawQBasicCircle(_pixelBuffer, _bufferWidth, _bufferHeight, step, x, y, radius, packedColor, start.Value, end.Value, aspect ?? 1);
 		}
 		else
 		{
-			Draw.DrawCircleOutline(_pixelBuffer, _bufferWidth, _bufferHeight, x, y, radius, ColorMap[CurrentPalette[drawColor]].r, ColorMap[CurrentPalette[drawColor]].g, ColorMap[CurrentPalette[drawColor]].b, 255);
+			var mappedColor = GetCurrentColor(drawColor);
+			Draw.DrawCircleOutline(_pixelBuffer, _bufferWidth, _bufferHeight, x, y, radius, mappedColor.r, mappedColor.g, mappedColor.b, 255);
 		}
 	}
 
 	public void COLOR(int color)
 	{
 		_color = color;
+	}
+
+	public (byte r, byte g, byte b) GetColor(int color)
+	{
+		return GetCurrentColor(color);
 	}
 
 	// <summary>
@@ -298,28 +319,31 @@ public class QBasic
 		int width = bufferWidth ?? _bufferWidth;
 		int height = bufferHeight ?? _bufferHeight;
 
-		byte r = ColorMap[CurrentPalette[_color]].r;
-		byte g = ColorMap[CurrentPalette[_color]].g;
-		byte b = ColorMap[CurrentPalette[_color]].b;
+		var currentColor = GetCurrentColor(color);
+		byte r = currentColor.r;
+		byte g = currentColor.g;
+		byte b = currentColor.b;
 		byte a = 255;
 
 		switch (style)
 		{
 			case LineBoxStyle.None:
-				Draw.DrawLine(buffer, width, height, x1, y1, x2, y2, r, g, b, a);
+				Draw.DrawLine(buffer, x1, y1, x2, y2, width, height, r, g, b, a);
 				break;
 			case LineBoxStyle.B:
 				// Draw the box outline
-				Draw.DrawLine(buffer, width, height, x1, y1, x2, y1, r, g, b, a); // Top
-				Draw.DrawLine(buffer, width, height, x1, y2, x2, y2, r, g, b, a); // Bottom
-				Draw.DrawLine(buffer, width, height, x1, y1, x1, y2, r, g, b, a); // Left
-				Draw.DrawLine(buffer, width, height, x2, y1, x2, y2, r, g, b, a); // Right
+				Draw.DrawLine(buffer, x1, y1, x2, y1, width, height, r, g, b, a); // Top
+				Draw.DrawLine(buffer, x1, y2, x2, y2, width, height, r, g, b, a); // Bottom
+				Draw.DrawLine(buffer, x1, y1, x1, y2, width, height, r, g, b, a); // Left
+				Draw.DrawLine(buffer, x2, y1, x2, y2, width, height, r, g, b, a); // Right
 				break;
 			case LineBoxStyle.BF:
 				// Draw filled box
-				for (int y = y1; y <= y2; y++)
+				int top = Math.Min(y1, y2);
+				int bottom = Math.Max(y1, y2);
+				for (int y = top; y <= bottom; y++)
 				{
-					Draw.DrawLine(buffer, width, height, x1, y, x2, y, r, g, b, a);
+					Draw.DrawLine(buffer, Math.Min(x1, x2), y, Math.Max(x1, x2), y, width, height, r, g, b, a);
 				}
 				break;
 		}
@@ -333,19 +357,42 @@ public class QBasic
 
 	public void PRINT(string text)
 	{
-		byte r = ColorMap[CurrentPalette[_color]].r;
-		byte g = ColorMap[CurrentPalette[_color]].g;
-		byte b = ColorMap[CurrentPalette[_color]].b;
+		PRINT(text, false);
+	}
 
-		Tuple<int, int> pixelCoords = TranslateRowColToPixel(_locateX, _locateY);
+	public void PRINT(string text, bool clearBackground)
+	{
+		var currentColor = GetCurrentColor(_color);
+		byte r = currentColor.r;
+		byte g = currentColor.g;
+		byte b = currentColor.b;
+
+		Tuple<int, int> pixelCoords = TranslateRowColToPixel(_locateY, _locateX);
+		if (clearBackground)
+		{
+			var backgroundColor = GetCurrentColor(0);
+			Draw.DrawFilledRectangle(
+				_pixelBuffer,
+				_bufferWidth,
+				_bufferHeight,
+				pixelCoords.Item1,
+				pixelCoords.Item2,
+				pixelCoords.Item1 + text.Length * 16,
+				pixelCoords.Item2 + _charHeight,
+				backgroundColor.r,
+				backgroundColor.g,
+				backgroundColor.b,
+				255);
+		}
 		_fontRenderer.RenderText(text, pixelCoords.Item1, pixelCoords.Item2, r, g, b);
 	}
 
 	public void PSET(int x, int y, int color)
 	{
-		byte r = ColorMap[CurrentPalette[color]].r;
-		byte g = ColorMap[CurrentPalette[color]].g;
-		byte b = ColorMap[CurrentPalette[color]].b;
+		var currentColor = GetCurrentColor(color);
+		byte r = currentColor.r;
+		byte g = currentColor.g;
+		byte b = currentColor.b;
 		byte a = 255;
 
 		Draw.DrawPixel(_pixelBuffer, x, y, _bufferWidth, _bufferHeight, r, g, b, a);
@@ -370,6 +417,36 @@ public class QBasic
 
 				int targetX = destinationX + spriteX - sourceX;
 				int targetY = destinationY + spriteY - sourceY;
+				if (targetX < 0 || targetX >= _bufferWidth || targetY < 0 || targetY >= _bufferHeight)
+				{
+					continue;
+				}
+
+				int targetIndex = (targetY * _bufferWidth + targetX) * 4;
+				System.Buffer.BlockCopy(sprite, sourceIndex, _pixelBuffer, targetIndex, 4);
+			}
+		}
+	}
+
+	public void PUT(byte[]? sprite, int spriteWidth, int spriteHeight, int destinationX, int destinationY, bool compactSprite)
+	{
+		if (sprite == null)
+		{
+			return;
+		}
+
+		for (int spriteY = 0; spriteY < spriteHeight; spriteY++)
+		{
+			for (int spriteX = 0; spriteX < spriteWidth; spriteX++)
+			{
+				int sourceIndex = (spriteY * spriteWidth + spriteX) * 4;
+				if (sprite[sourceIndex + 3] == 0)
+				{
+					continue;
+				}
+
+				int targetX = destinationX + spriteX;
+				int targetY = destinationY + spriteY;
 				if (targetX < 0 || targetX >= _bufferWidth || targetY < 0 || targetY >= _bufferHeight)
 				{
 					continue;
@@ -410,13 +487,32 @@ public class QBasic
 			return;
 		}
 
-		using WaveOutEvent outputDevice = new WaveOutEvent();
-		outputDevice.Init(new ConcatenatingSampleProvider(noteProviders));
-		outputDevice.Play();
-
-		while (outputDevice.PlaybackState == PlaybackState.Playing)
+		try
 		{
-			Thread.Sleep(10);
+			using WaveOutEvent outputDevice = new WaveOutEvent();
+			outputDevice.Init(new ConcatenatingSampleProvider(noteProviders));
+			outputDevice.Play();
+
+			while (outputDevice.PlaybackState == PlaybackState.Playing)
+			{
+				Thread.Sleep(10);
+			}
+		}
+		catch (DllNotFoundException)
+		{
+			// The Windows waveOut backend is unavailable on macOS and Linux.
+		}
+		catch (EntryPointNotFoundException)
+		{
+			// The installed native audio backend does not expose waveOut.
+		}
+		catch (PlatformNotSupportedException)
+		{
+			// Audio is optional; continue the game without playback.
+		}
+		catch (Exception) when (OperatingSystem.IsMacOS() || OperatingSystem.IsLinux())
+		{
+			// Native audio backends are optional on non-Windows platforms.
 		}
 	}
 
@@ -450,11 +546,25 @@ public class QBasic
 			throw new ArgumentOutOfRangeException("Palette index must be between 0 and 15.");
 		}
 
-		if (!ColorMap.ContainsKey(color))
+		if (color < 0 || color > 63)
 		{
-			throw new ArgumentOutOfRangeException("Color must be a valid QBasic color index (0-15).");
+			throw new ArgumentOutOfRangeException(nameof(color), "Color must be a valid QBasic color index (0-63).");
 		}
 
 		CurrentPalette[index] = color;
+	}
+
+	private (byte r, byte g, byte b) GetCurrentColor(int color)
+	{
+		int paletteColor = CurrentPalette[color];
+		if (ColorMap.TryGetValue(paletteColor, out var standardColor))
+		{
+			return standardColor;
+		}
+
+		int red = ((paletteColor >> 5) & 1) * 2 + ((paletteColor >> 2) & 1);
+		int green = ((paletteColor >> 4) & 1) * 2 + ((paletteColor >> 1) & 1);
+		int blue = ((paletteColor >> 3) & 1) * 2 + (paletteColor & 1);
+		return ((byte)(red * 85), (byte)(green * 85), (byte)(blue * 85));
 	}
 }

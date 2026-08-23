@@ -18,8 +18,8 @@ namespace Gorillas.Game
 
 		// Constants
 		public const int SPEEDCONST = 500;
-		public const bool TRUE = false;     // omg
-		public const bool FALSE = !TRUE;    // yeah, this is weird
+		public const bool TRUE = true;
+		public const bool FALSE = false;
 		public const int HITSELF = 1;
 		public const int BACKATTR = 0;
 		public const int OBJECTCOLOR = 1;
@@ -60,6 +60,8 @@ namespace Gorillas.Game
 		private float MachSpeed; // "Single-precision" 32-bit float
 		private XYPoint[] BuildingCoordinates = new XYPoint[31];
 		private int[] TotalWins = new int[2];
+		private byte[]?[] GorillaBackgrounds = new byte[]?[2];
+		private byte[]? TextBackground;
 
 		private struct XYPoint
 		{
@@ -89,9 +91,11 @@ namespace Gorillas.Game
 			SunHit = 4; // Blue
 
 			// Set other variables
-			SunHt = Scl(25);
-			GHeight = Scl(20);
+			SunHt = mode == 9 ? 39 : 20;
+			GHeight = mode == 9 ? 25 : 12;
 			MachSpeed = 343.0f; // Speed of sound in m/s
+			LBan = CreateBananaSprite(false);
+			RBan = CreateBananaSprite(true);
 		}
 
 		/// <summary>
@@ -106,15 +110,16 @@ namespace Gorillas.Game
 
 			// Clear old sun
 			// TODO: We will likely clear the entire framebuffer between frames instead of doing this
+			var backgroundColor = _qBasic.GetColor(BACKATTR);
 			Draw.DrawFilledRectangle(
 				_pixelBuffer,
 				ScrWidth,
 				ScrHeight,
 				x - Scl(22),
 				y - Scl(18),
-				x + Scl(22),
-				y + Scl(18),
-				0, 0, 0, 255);
+				Scl(44),
+				Scl(36),
+				backgroundColor.r, backgroundColor.g, backgroundColor.b, 255);
 
 			// DRAW NEW SUN:
 
@@ -124,17 +129,18 @@ namespace Gorillas.Game
 				ScrWidth, ScrHeight, // Width & Height of frame buffer
 				x, y, // Position
 				Scl(12), // Radius
-				255, 255, 85, 255); // Yellow color
+				_qBasic.GetColor(SUNATTR).r, _qBasic.GetColor(SUNATTR).g, _qBasic.GetColor(SUNATTR).b, 255); // Sun color
 
 			// rays
-			Draw.DrawLine(_pixelBuffer, x - Scl(20), y, x + Scl(20), y, ScrWidth, ScrHeight, 255, 255, 85, 255);
-			Draw.DrawLine(_pixelBuffer, x, y - Scl(15), x, y + Scl(15), ScrWidth, ScrHeight, 255, 255, 85, 255);
-			Draw.DrawLine(_pixelBuffer, x - Scl(15), y - Scl(10), x + Scl(15), y + Scl(10), ScrWidth, ScrHeight, 255, 255, 85, 255);
-			Draw.DrawLine(_pixelBuffer, x - Scl(15), y + Scl(10), x + Scl(15), y - Scl(10), ScrWidth, ScrHeight, 255, 255, 85, 255);
-			Draw.DrawLine(_pixelBuffer, x - Scl(8), y - Scl(13), x + Scl(8), y + Scl(13), ScrWidth, ScrHeight, 255, 255, 85, 255);
-			Draw.DrawLine(_pixelBuffer, x - Scl(8), y + Scl(13), x + Scl(8), y - Scl(13), ScrWidth, ScrHeight, 255, 255, 85, 255);
-			Draw.DrawLine(_pixelBuffer, x - Scl(18), y - Scl(5), x + Scl(18), y + Scl(5), ScrWidth, ScrHeight, 255, 255, 85, 255);
-			Draw.DrawLine(_pixelBuffer, x - Scl(18), y + Scl(5), x + Scl(18), y - Scl(5), ScrWidth, ScrHeight, 255, 255, 85, 255);
+			var sunColor = _qBasic.GetColor(SUNATTR);
+			Draw.DrawLine(_pixelBuffer, x - Scl(20), y, x + Scl(20), y, ScrWidth, ScrHeight, sunColor.r, sunColor.g, sunColor.b, 255);
+			Draw.DrawLine(_pixelBuffer, x, y - Scl(15), x, y + Scl(15), ScrWidth, ScrHeight, sunColor.r, sunColor.g, sunColor.b, 255);
+			Draw.DrawLine(_pixelBuffer, x - Scl(15), y - Scl(10), x + Scl(15), y + Scl(10), ScrWidth, ScrHeight, sunColor.r, sunColor.g, sunColor.b, 255);
+			Draw.DrawLine(_pixelBuffer, x - Scl(15), y + Scl(10), x + Scl(15), y - Scl(10), ScrWidth, ScrHeight, sunColor.r, sunColor.g, sunColor.b, 255);
+			Draw.DrawLine(_pixelBuffer, x - Scl(8), y - Scl(13), x + Scl(8), y + Scl(13), ScrWidth, ScrHeight, sunColor.r, sunColor.g, sunColor.b, 255);
+			Draw.DrawLine(_pixelBuffer, x - Scl(8), y + Scl(13), x + Scl(8), y - Scl(13), ScrWidth, ScrHeight, sunColor.r, sunColor.g, sunColor.b, 255);
+			Draw.DrawLine(_pixelBuffer, x - Scl(18), y - Scl(5), x + Scl(18), y + Scl(5), ScrWidth, ScrHeight, sunColor.r, sunColor.g, sunColor.b, 255);
+			Draw.DrawLine(_pixelBuffer, x - Scl(18), y + Scl(5), x + Scl(18), y - Scl(5), ScrWidth, ScrHeight, sunColor.r, sunColor.g, sunColor.b, 255);
 
 			// mouth
 			if (mouth)
@@ -145,7 +151,10 @@ namespace Gorillas.Game
 			else
 			{
 				// draw smile
-				Draw.DrawArc(_pixelBuffer, ScrWidth, ScrHeight, x, y, Scl(8), Convert.ToSingle(210 * pi / 180), Convert.ToSingle(330 * pi / 180), 0, 0, 0, 255);
+				for (int mouthRadius = Scl(7); mouthRadius <= Scl(8); mouthRadius++)
+				{
+					Draw.DrawArc(_pixelBuffer, ScrWidth, ScrHeight, x, y, mouthRadius, Convert.ToSingle(30 * pi / 180), Convert.ToSingle(150 * pi / 180), 0, 0, 0, 255);
+				}
 			}
 
 			// eyes
@@ -164,17 +173,17 @@ namespace Gorillas.Game
 			{
 				ExplosionColor = 2;
 				BackColor = 1;
-				Palettes.Add(0, 1);
-				Palettes.Add(1, 46);
-				Palettes.Add(2, 44);
-				Palettes.Add(3, 54);
-				Palettes.Add(5, 7);
-				Palettes.Add(6, 4);
-				Palettes.Add(7, 3);
+				_qBasic.PALETTE(0, 1);
+				_qBasic.PALETTE(1, 46);
+				_qBasic.PALETTE(2, 44);
+				_qBasic.PALETTE(3, 54);
+				_qBasic.PALETTE(5, 7);
+				_qBasic.PALETTE(6, 4);
+				_qBasic.PALETTE(7, 3);
 
 				// Display Color
 				// TODO: Determine what "Display Color" means in this context. It may refer to setting the color palette for the display, but without more information, it's unclear.
-				Palettes.Add(9, 63);
+				_qBasic.PALETTE(9, 63);
 			}
 			else
 			{
@@ -218,6 +227,7 @@ namespace Gorillas.Game
 
 			_qBasic.SCREEN(0);
 			MaxCol = 80;
+			_qBasic.PALETTE(0, 0);
 			_qBasic.COLOR(15);
 			_qBasic.CLS();
 
@@ -251,6 +261,7 @@ namespace Gorillas.Game
 
 			_qBasic.COLOR(4);
 			_qBasic.ClearPendingKeys();
+			Task<char?> keyTask = _qBasic.WAITKEY();
 
 			while (true)
 			{
@@ -259,7 +270,7 @@ namespace Gorillas.Game
 					_qBasic.LOCATE(1, 1);
 					_qBasic.PRINT(sparkle.Substring(a - 1, 80));
 					_qBasic.LOCATE(22, 1);
-					_qBasic.PRINT(sparkle.Substring(4 - a, 80));
+					_qBasic.PRINT(sparkle.Substring(5 - a, 80));
 
 					for (int b = 2; b <= 21; b++)
 					{
@@ -270,10 +281,10 @@ namespace Gorillas.Game
 						_qBasic.PRINT(sparkleOn ? "*" : " ");
 					}
 
-					await Task.Delay(20);
-					if (_qBasic.HasPendingKey)
+					await Task.Delay(100);
+					if (keyTask.IsCompleted)
 					{
-						await _qBasic.WAITKEY();
+						await keyTask;
 						return;
 					}
 				}
@@ -400,13 +411,13 @@ namespace Gorillas.Game
 			switch (arms)
 			{
 				case RIGHTUP:
-					GorR = temporaryFramebuffer;
+					GorR = Utils.CaptureRegion(temporaryFramebuffer, ScrWidth, ScrHeight, x - Scl(15), y - Scl(1), Scl(29) + 1, Scl(29) + 1);
 					break;
 				case LEFTUP:
-					GorL = temporaryFramebuffer;
+					GorL = Utils.CaptureRegion(temporaryFramebuffer, ScrWidth, ScrHeight, x - Scl(15), y - Scl(1), Scl(29) + 1, Scl(29) + 1);
 					break;
 				case ARMSDOWN:
-					GorD = temporaryFramebuffer;
+					GorD = Utils.CaptureRegion(temporaryFramebuffer, ScrWidth, ScrHeight, x - Scl(15), y - Scl(1), Scl(29) + 1, Scl(29) + 1);
 					break;
 			}
 		}
@@ -418,6 +429,7 @@ namespace Gorillas.Game
 		/// <param name="player2">The name of player 2.</param>
 		public async Task GorillaIntro(string player1, string player2)
 		{
+			_qBasic.COLOR(7);
 			_qBasic.LOCATE(16, 34);
 			_qBasic.PRINT("--------------");
 			_qBasic.LOCATE(18, 34);
@@ -467,39 +479,39 @@ namespace Gorillas.Game
 				Center(5, "             STARRING:               ");
 				Center(7, $"{player1} AND {player2}");
 
-				_qBasic.PUT(GorD, x, y, x - 13, y);
-				_qBasic.PUT(GorD, x, y, x + 47, y);
+				PutGorilla(GorD, x - 13, y);
+				PutGorilla(GorD, x + 47, y);
 				await Rest(1000);
 
-				_qBasic.PUT(GorL, x, y, x - 13, y);
-				_qBasic.PUT(GorR, x, y, x + 47, y);
+				PutGorilla(GorL, x - 13, y);
+				PutGorilla(GorR, x + 47, y);
 				_qBasic.PLAY(new[] { ("B", 150L), ("B", 75L), ("A", 75L), ("A", 75L), ("B", 75L) });
 				await Rest(300);
 
-				_qBasic.PUT(GorR, x, y, x - 13, y);
-				_qBasic.PUT(GorL, x, y, x + 47, y);
+				PutGorilla(GorR, x - 13, y);
+				PutGorilla(GorL, x + 47, y);
 				_qBasic.PLAY(new[] { ("E", 150L), ("D", 75L), ("D", 75L), ("E", 75L), ("E", 75L), ("D", 75L) });
 				await Rest(300);
 
-				_qBasic.PUT(GorL, x, y, x - 13, y);
-				_qBasic.PUT(GorR, x, y, x + 47, y);
+				PutGorilla(GorL, x - 13, y);
+				PutGorilla(GorR, x + 47, y);
 				_qBasic.PLAY(new[] { ("G", 150L), ("E", 75L), ("E", 75L), ("G", 75L), ("G", 75L), ("E", 75L) });
 				await Rest(300);
 
-				_qBasic.PUT(GorR, x, y, x - 13, y);
-				_qBasic.PUT(GorL, x, y, x + 47, y);
+				PutGorilla(GorR, x - 13, y);
+				PutGorilla(GorL, x + 47, y);
 				_qBasic.PLAY(new[] { ("B", 150L), ("B", 75L), ("A", 75L), ("G", 75L), ("B", 150L) });
 				await Rest(300);
 
 				for (int i = 1; i <= 4; i++)
 				{
-					_qBasic.PUT(GorL, x, y, x - 13, y);
-					_qBasic.PUT(GorR, x, y, x + 47, y);
+					PutGorilla(GorL, x - 13, y);
+					PutGorilla(GorR, x + 47, y);
 					_qBasic.PLAY(new[] { ("E", 50L), ("F", 50L), ("G", 50L), ("E", 50L), ("F", 50L), ("D", 50L), ("C", 50L) });
 					await Rest(100);
 
-					_qBasic.PUT(GorR, x, y, x - 13, y);
-					_qBasic.PUT(GorL, x, y, x + 47, y);
+					PutGorilla(GorR, x - 13, y);
+					PutGorilla(GorL, x + 47, y);
 					_qBasic.PLAY(new[] { ("E", 50L), ("F", 50L), ("G", 50L), ("E", 50L), ("F", 50L), ("D", 50L), ("C", 50L) });
 					await Rest(100);
 				}
@@ -543,6 +555,22 @@ namespace Gorillas.Game
 
 		private void DrawBan(double x, double y, int rotation, bool draw)
 		{
+			if (!draw)
+			{
+				return;
+			}
+
+			byte[]? banana = rotation switch
+			{
+				0 => LBan,
+				3 => RBan,
+				1 => RBan,
+				2 => LBan,
+				_ => null
+			};
+			_qBasic.PUT(banana, 11, 7, (int)x, (int)y, true);
+
+			/*
 			byte[]? banana = rotation switch
 			{
 				0 => LBan,
@@ -555,19 +583,68 @@ namespace Gorillas.Game
 			{
 				_qBasic.PUT(banana, (int)x, (int)y, (int)x, (int)y);
 			}
+			*/
+		}
+
+		private void PutGorilla(byte[]? sprite, int x, int y)
+		{
+			_qBasic.PUT(sprite, Scl(29) + 1, Scl(29) + 1, x, y, true);
+		}
+
+		private byte[] CreateBananaSprite(bool right)
+		{
+			const int width = 11;
+			const int height = 7;
+			byte[] sprite = new byte[width * height * 4];
+			string[] pixels = right
+				? new[] { "      ##   ", "     ####  ", "    ###### ", "     ##### ", "      ###  ", "       #   ", "           " }
+				: new[] { "   ##      ", "  ####     ", " ######    ", "  #####    ", "   ###     ", "    #      ", "           " };
+
+			for (int y = 0; y < height; y++)
+			{
+				for (int x = 0; x < width; x++)
+				{
+					if (pixels[y][x] != '#')
+					{
+						continue;
+					}
+
+					int index = (y * width + x) * 4;
+					sprite[index] = 252;
+					sprite[index + 1] = 252;
+					sprite[index + 2] = 84;
+					sprite[index + 3] = 255;
+				}
+			}
+			return sprite;
 		}
 
 		private async Task VictoryDance(int player)
 		{
+			int originX = GorillaX[player - 1];
+			int originY = GorillaY[player - 1];
+			int width = Scl(29) + 1;
+			int height = Scl(29) + 1;
+			byte[] background = GorillaBackgrounds[player - 1]
+				?? Utils.CaptureRegion(_qBasic.PixelBuffer, ScrWidth, ScrHeight, originX, originY, width, height);
+
 			for (int i = 1; i <= 4; i++)
 			{
-				_qBasic.PUT(GorL, GorillaX[player - 1], GorillaY[player - 1], GorillaX[player - 1], GorillaY[player - 1]);
+				Utils.RestoreRegion(_qBasic.PixelBuffer, ScrWidth, ScrHeight, background, originX, originY, width, height);
+				DrawGorilla(GorillaX[player - 1], GorillaY[player - 1], LEFTUP);
+				PutGorilla(GorL, GorillaX[player - 1], GorillaY[player - 1]);
 				_qBasic.PLAY(new[] { ("E", 50L), ("F", 50L), ("G", 50L), ("E", 50L), ("F", 50L), ("D", 50L), ("C", 50L) });
 				await Rest(200);
-				_qBasic.PUT(GorR, GorillaX[player - 1], GorillaY[player - 1], GorillaX[player - 1], GorillaY[player - 1]);
+				Utils.RestoreRegion(_qBasic.PixelBuffer, ScrWidth, ScrHeight, background, originX, originY, width, height);
+				DrawGorilla(GorillaX[player - 1], GorillaY[player - 1], RIGHTUP);
+				PutGorilla(GorR, GorillaX[player - 1], GorillaY[player - 1]);
 				_qBasic.PLAY(new[] { ("E", 50L), ("F", 50L), ("G", 50L), ("E", 50L), ("F", 50L), ("D", 50L), ("C", 50L) });
 				await Rest(200);
 			}
+
+			Utils.RestoreRegion(_qBasic.PixelBuffer, ScrWidth, ScrHeight, background, originX, originY, width, height);
+			DrawGorilla(GorillaX[player - 1], GorillaY[player - 1], ARMSDOWN);
+			PutGorilla(GorD, GorillaX[player - 1], GorillaY[player - 1]);
 		}
 
 		private async Task DoExplosion(double x, double y)
@@ -584,6 +661,19 @@ namespace Gorillas.Game
 				_qBasic.CIRCLE(false, (int)x, (int)y, (int)circleRadius, BACKATTR);
 				await Rest(5);
 			}
+
+			var backgroundColor = _qBasic.GetColor(BACKATTR);
+			Draw.DrawFilledCircle(
+				_pixelBuffer,
+				ScrWidth,
+				ScrHeight,
+				(int)x,
+				(int)y,
+				radius,
+				backgroundColor.r,
+				backgroundColor.g,
+				backgroundColor.b,
+				255);
 		}
 
 		private void MakeCityScape(XYPoint[] buildingCoordinates)
@@ -612,13 +702,14 @@ namespace Gorillas.Game
 				buildingCoordinates[currentBuilding] = new XYPoint { XCoor = x, YCoor = bottomLine - buildingHeight };
 
 				_qBasic.COLOR(Mode == 9 ? FnRan(3) + 4 : 2);
-				_qBasic.LINE(x, bottomLine, x + width, bottomLine - buildingHeight, 0, QBasic.LineBoxStyle.BF);
+				_qBasic.LINE(x, bottomLine, x + width, bottomLine - buildingHeight, Mode == 9 ? FnRan(3) + 4 : 2, QBasic.LineBoxStyle.BF);
 				for (int windowX = x + 3; windowX < x + width - 3; windowX += horizontalSpacing)
 				{
 					for (int windowY = buildingHeight - 3; windowY >= 7; windowY -= verticalSpacing)
 					{
 						_qBasic.COLOR(Mode == 9 && FnRan(4) != 1 ? WINDOWCOLOR : 8);
-						_qBasic.LINE(windowX, bottomLine - windowY, windowX + windowWidth, bottomLine - windowY + windowHeight, 0, QBasic.LineBoxStyle.BF);
+						int windowColor = Mode == 9 && FnRan(4) != 1 ? WINDOWCOLOR : 8;
+						_qBasic.LINE(windowX, bottomLine - windowY, windowX + windowWidth, bottomLine - windowY + windowHeight, windowColor, QBasic.LineBoxStyle.BF);
 					}
 				}
 				x += width + 2;
@@ -631,8 +722,11 @@ namespace Gorillas.Game
 			if (Wind != 0)
 			{
 				int windLine = Wind * 3 * (ScrWidth / 320);
-				_qBasic.COLOR(ExplosionColor);
-				_qBasic.LINE(ScrWidth / 2, ScrHeight - 5, ScrWidth / 2 + windLine, ScrHeight - 5, 0);
+				int arrowDirection = Wind > 0 ? -2 : 2;
+				int arrowX = ScrWidth / 2 + windLine;
+				_qBasic.LINE(ScrWidth / 2, ScrHeight - 5, arrowX, ScrHeight - 5, ExplosionColor);
+				_qBasic.LINE(arrowX, ScrHeight - 5, arrowX + arrowDirection, ScrHeight - 7, ExplosionColor);
+				_qBasic.LINE(arrowX, ScrHeight - 5, arrowX + arrowDirection, ScrHeight - 3, ExplosionColor);
 			}
 		}
 
@@ -646,7 +740,11 @@ namespace Gorillas.Game
 				int buildingWidth = buildingCoordinates[buildingNumber + 1].XCoor - buildingCoordinates[buildingNumber].XCoor;
 				GorillaX[i] = buildingCoordinates[buildingNumber].XCoor + buildingWidth / 2 - xAdjustment;
 				GorillaY[i] = buildingCoordinates[buildingNumber].YCoor - yAdjustment;
-				_qBasic.PUT(GorD, GorillaX[i], GorillaY[i], GorillaX[i], GorillaY[i]);
+				int gorillaOriginX = GorillaX[i];
+				int gorillaOriginY = GorillaY[i];
+				GorillaBackgrounds[i] = Utils.CaptureRegion(_qBasic.PixelBuffer, ScrWidth, ScrHeight, gorillaOriginX, gorillaOriginY, Scl(29) + 1, Scl(29) + 1);
+				DrawGorilla(GorillaX[i], GorillaY[i], ARMSDOWN);
+				PutGorilla(GorD, GorillaX[i], GorillaY[i]);
 			}
 		}
 
@@ -671,8 +769,15 @@ namespace Gorillas.Game
 			return GetNum(row, column);
 		}
 
-		private async Task<bool> DoShot(int playerNum, int x, int y)
+		private async Task<int> DoShot(int playerNum, int x, int y)
 		{
+			if (SunHit != 0)
+			{
+				DoSun(SUNHAPPY);
+				SunHit = 0;
+			}
+
+			_qBasic.COLOR(7);
 			int locateColumn = playerNum == 1 ? 1 : (Mode == 9 ? 66 : 26);
 			_qBasic.LOCATE(2, locateColumn);
 			_qBasic.PRINT("Angle:");
@@ -682,20 +787,17 @@ namespace Gorillas.Game
 			double velocity = await GetNum(3, locateColumn + 10);
 			if (playerNum == 2) angle = 180 - angle;
 
-			for (int row = 1; row <= 4; row++)
+			if (TextBackground != null)
 			{
-				_qBasic.LOCATE(row, 1);
-				_qBasic.PRINT(new string(' ', 30 / (80 / MaxCol)));
-				_qBasic.LOCATE(row, 50 / (80 / MaxCol));
-				_qBasic.PRINT(new string(' ', 30 / (80 / MaxCol)));
+				Utils.RestoreRegion(_qBasic.PixelBuffer, ScrWidth, ScrHeight, TextBackground, 0, 0, ScrWidth, _qBasic.CharHeight * 4);
 			}
 
 			SunHit = 0;
 			int playerHit = await PlotShot(x, y, angle, velocity, playerNum);
-			if (playerHit == 0) return false;
+			if (playerHit == 0) return 0;
 			if (playerHit == playerNum) playerNum = 3 - playerNum;
 			await VictoryDance(playerNum);
-			return true;
+			return playerHit;
 		}
 
 		private async Task<int> PlotShot(int startX, int startY, double angle, double velocity, int playerNum)
@@ -703,64 +805,170 @@ namespace Gorillas.Game
 			angle = angle / 180 * pi;
 			double initialXVelocity = Math.Cos(angle) * velocity;
 			double initialYVelocity = Math.Sin(angle) * velocity;
-			_qBasic.PUT(playerNum == 1 ? GorL : GorR, startX, startY, startX, startY);
+			int gorillaOriginX = startX;
+			int gorillaOriginY = startY;
+			int gorillaWidth = Scl(29) + 1;
+			int gorillaHeight = Scl(29) + 1;
+			byte[] gorillaBackground = GorillaBackgrounds[playerNum - 1]
+				?? Utils.CaptureRegion(_qBasic.PixelBuffer, ScrWidth, ScrHeight, gorillaOriginX, gorillaOriginY, gorillaWidth, gorillaHeight);
+			Utils.RestoreRegion(_qBasic.PixelBuffer, ScrWidth, ScrHeight, gorillaBackground, gorillaOriginX, gorillaOriginY, gorillaWidth, gorillaHeight);
+			DrawGorilla(startX, startY, playerNum == 1 ? LEFTUP : RIGHTUP);
+			PutGorilla(playerNum == 1 ? GorL : GorR, startX, startY);
 			await Rest(100);
-			_qBasic.PUT(GorD, startX, startY, startX, startY);
+			Utils.RestoreRegion(_qBasic.PixelBuffer, ScrWidth, ScrHeight, gorillaBackground, gorillaOriginX, gorillaOriginY, gorillaWidth, gorillaHeight);
+			DrawGorilla(startX, startY, ARMSDOWN);
+			PutGorilla(GorD, startX, startY);
 
 			if (velocity < 2)
 			{
-				return await ExplodeGorilla(startX, startY);
+				return await ExplodeGorilla(startX, startY, playerNum);
 			}
 
 			double startXPosition = startX + (playerNum == 2 ? Scl(25) : 0);
 			double startYPosition = startY - Scl(4) - 3;
 			int direction = playerNum == 2 ? Scl(4) : Scl(-4);
 			double time = 0;
+			byte[]? previousBananaBackground = null;
+			int previousBananaX = 0;
+			int previousBananaY = 0;
+			bool shotInSun = false;
+			bool leftThrower = false;
 			while (true)
 			{
 				await Rest(20);
+				if (previousBananaBackground != null)
+				{
+					Utils.RestoreRegion(_pixelBuffer, ScrWidth, ScrHeight, previousBananaBackground, previousBananaX, previousBananaY);
+				}
 				double x = startXPosition + initialXVelocity * time + .5 * (Wind / 5.0) * time * time;
 				double y = startYPosition + (-initialYVelocity * time + .5 * gravity * time * time) * (ScrHeight / 350.0);
-				if (x >= ScrWidth - Scl(10) || x <= 3 || y >= ScrHeight - 3 || y <= 0) return 0;
+				if (x >= ScrWidth - Scl(10) || x <= 3 || y >= ScrHeight - 3) return 0;
 
-				int checkX = Math.Clamp((int)x + Scl(8 * (2 - playerNum)), 0, ScrWidth - 1);
-				int checkY = Math.Clamp((int)y, 0, ScrHeight - 1);
-				int pixelIndex = (checkY * ScrWidth + checkX) * 4;
-				bool occupied = _pixelBuffer[pixelIndex + 3] != 0;
-				if (occupied)
+				if (y > 0)
 				{
-					if (checkX < ScrWidth / 2 && Math.Abs(checkX - GorillaX[0]) < Scl(16) && Math.Abs(checkY - GorillaY[0]) < Scl(30)) return await ExplodeGorilla(x, y);
-					if (checkX >= ScrWidth / 2 && Math.Abs(checkX - GorillaX[1]) < Scl(16) && Math.Abs(checkY - GorillaY[1]) < Scl(30)) return await ExplodeGorilla(x, y);
-					await DoExplosion(x, y);
-					return 0;
-				}
+					int checkX = (int)x + Scl(8 * (2 - playerNum));
+					int checkY = (int)y;
+					if (checkX < 0 || checkX >= ScrWidth || checkY < 0 || checkY >= ScrHeight)
+					{
+						time += .1;
+						continue;
+					}
 
-				DrawBan(x, y, (int)(time * 10) % 4, true);
+					int pixelIndex = (checkY * ScrWidth + checkX) * 4;
+					bool insideSunBounds = Math.Abs(ScrWidth / 2 - checkX) <= Scl(20) && checkY < SunHt;
+					var sunColor = _qBasic.GetColor(SUNATTR);
+					bool isSun = _pixelBuffer[pixelIndex] == sunColor.r
+						&& _pixelBuffer[pixelIndex + 1] == sunColor.g
+						&& _pixelBuffer[pixelIndex + 2] == sunColor.b;
+					if ((isSun || insideSunBounds) && checkY < SunHt)
+					{
+						DoSun(SUNSHOCK);
+						SunHit = 1;
+						shotInSun = true;
+					}
+					else if (shotInSun && !insideSunBounds)
+					{
+						shotInSun = false;
+					}
+
+					int hitGorilla = !shotInSun ? GetHitGorilla(checkX, checkY) : 0;
+					if (!leftThrower && !IsInsideGorillaBounds(x, y, playerNum))
+					{
+						leftThrower = true;
+					}
+					if (!leftThrower && hitGorilla == playerNum)
+					{
+						hitGorilla = 0;
+					}
+					if (hitGorilla != 0)
+					{
+						return await ExplodeGorilla(x, y, hitGorilla);
+					}
+
+					bool occupied = !shotInSun && IsCollidablePixel(pixelIndex);
+					if (occupied)
+					{
+						await DoExplosion(checkX, checkY);
+						return 0;
+					}
+
+					if (!shotInSun)
+					{
+						previousBananaX = Math.Clamp((int)x, 0, ScrWidth - 11);
+						previousBananaY = Math.Clamp((int)y, 0, ScrHeight - 7);
+						previousBananaBackground = Utils.CaptureRegion(_pixelBuffer, ScrWidth, ScrHeight, previousBananaX, previousBananaY, 11, 7);
+						DrawBan(x, y, (int)(time * 10) % 4, true);
+					}
+				}
 				time += .1;
 			}
 		}
 
-		private async Task<int> ExplodeGorilla(double x, double y)
+		private bool IsCollidablePixel(int pixelIndex)
 		{
-			int playerHit = x < ScrWidth / 2 ? 1 : 2;
+			byte red = _pixelBuffer[pixelIndex];
+			byte green = _pixelBuffer[pixelIndex + 1];
+			byte blue = _pixelBuffer[pixelIndex + 2];
+			(int r, int g, int b)[] collisionColors =
+			{
+				_qBasic.GetColor(OBJECTCOLOR),
+				_qBasic.GetColor(SUNATTR),
+				_qBasic.GetColor(4),
+				_qBasic.GetColor(5),
+				_qBasic.GetColor(6),
+				_qBasic.GetColor(WINDOWCOLOR)
+			};
+
+			return collisionColors.Any(color => red == color.r && green == color.g && blue == color.b);
+		}
+
+		private int GetHitGorilla(double x, double y)
+		{
+			for (int player = 0; player < GorillaX.Length; player++)
+			{
+				int left = GorillaX[player];
+				int top = GorillaY[player];
+				int right = left + Scl(29);
+				int bottom = top + Scl(29);
+				if (x >= left && x <= right && y >= top && y <= bottom)
+				{
+					return player + 1;
+				}
+			}
+
+			return 0;
+		}
+
+		private bool IsInsideGorillaBounds(double x, double y, int player)
+		{
+			int left = GorillaX[player - 1];
+			int top = GorillaY[player - 1];
+			return x >= left && x <= left + Scl(29) && y >= top && y <= top + Scl(29);
+		}
+
+		private async Task<int> ExplodeGorilla(double x, double y, int playerHit)
+		{
 			int centerX = GorillaX[playerHit - 1] + Scl(5) + Scl(4);
 			int centerY = GorillaY[playerHit - 1] + Scl(12);
-			for (int radius = 1; radius <= 24 * (ScrWidth / 320.0); radius++)
+			int maxRadius = Math.Max(1, (int)(24 * (ScrWidth / 320.0)));
+			var explosionColor = _qBasic.GetColor(ExplosionColor);
+			_qBasic.PLAY(new[] { ("E", 50L), ("F", 50L), ("G", 50L), ("E", 50L), ("F", 50L), ("D", 50L), ("C", 50L) });
+			for (int radius = 1; radius <= maxRadius; radius++)
 			{
-				_qBasic.CIRCLE(false, centerX, centerY, radius, ExplosionColor);
-				await Rest(5);
+				Draw.DrawFilledCircle(_pixelBuffer, ScrWidth, ScrHeight, centerX, centerY, radius, explosionColor.r, explosionColor.g, explosionColor.b, 255);
+				await Rest(20);
 			}
-			for (int radius = 24 * (ScrWidth / 320); radius >= 1; radius--)
+			var backgroundColor = _qBasic.GetColor(BACKATTR);
+			for (int radius = maxRadius; radius >= 1; radius--)
 			{
-				_qBasic.CIRCLE(false, centerX, centerY, radius, BACKATTR);
-				await Rest(5);
+				Draw.DrawFilledCircle(_pixelBuffer, ScrWidth, ScrHeight, centerX, centerY, radius, backgroundColor.r, backgroundColor.g, backgroundColor.b, 255);
+				await Rest(20);
 			}
 			return playerHit;
 		}
 
 		public async Task PlayGame(string player1, string player2, int numGames)
 		{
-			ClearGorillas();
 			Array.Clear(TotalWins);
 			for (int game = 1; game <= numGames; game++)
 			{
@@ -768,9 +976,11 @@ namespace Gorillas.Game
 				MakeCityScape(BuildingCoordinates);
 				PlaceGorillas(BuildingCoordinates);
 				DoSun(SUNHAPPY);
-				bool hit = false;
-				int tosser = 1;
-				while (!hit)
+				_qBasic.COLOR(7);
+				TextBackground = Utils.CaptureRegion(_qBasic.PixelBuffer, ScrWidth, ScrHeight, 0, 0, ScrWidth, _qBasic.CharHeight * 4);
+				int playerHit = 0;
+				int tosser = 2;
+				while (playerHit == 0)
 				{
 					tosser = 3 - tosser;
 					_qBasic.LOCATE(1, 1);
@@ -778,12 +988,35 @@ namespace Gorillas.Game
 					_qBasic.LOCATE(1, MaxCol - 1 - player2.Length);
 					_qBasic.PRINT(player2);
 					Center(23, $"{TotalWins[0]} >Score< {TotalWins[1]}");
-					hit = await DoShot(tosser, GorillaX[tosser - 1], GorillaY[tosser - 1]);
-					if (SunHit != 0) DoSun(SUNHAPPY);
-					if (hit) UpdateScores(tosser, hit ? 1 : 0);
+					playerHit = await DoShot(tosser, GorillaX[tosser - 1], GorillaY[tosser - 1]);
+					if (playerHit != 0)
+					{
+						UpdateScores(tosser, playerHit == tosser ? HITSELF : 0);
+					}
 				}
 				await Rest(1000);
 			}
+
+			_qBasic.SCREEN(0);
+			MaxCol = 80;
+			_qBasic.PALETTE(0, 0);
+			_qBasic.COLOR(7);
+			_qBasic.CLS();
+
+			Center(8, "GAME OVER!");
+			Center(10, "Score:");
+			_qBasic.LOCATE(11, 30);
+			_qBasic.PRINT(player1);
+			_qBasic.LOCATE(11, 50);
+			_qBasic.PRINT(TotalWins[0].ToString());
+			_qBasic.LOCATE(12, 30);
+			_qBasic.PRINT(player2);
+			_qBasic.LOCATE(12, 50);
+			_qBasic.PRINT(TotalWins[1].ToString());
+			Center(24, "Press any key to continue");
+			await SparklePause();
+			_qBasic.COLOR(7);
+			_qBasic.CLS();
 		}
 
 		/// <summary>
