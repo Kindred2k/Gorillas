@@ -211,7 +211,7 @@ namespace Gorillas.Game
 				_qBasic.PALETTE(3, 54);
 				_qBasic.PALETTE(5, 7);
 				_qBasic.PALETTE(6, 4);
-				_qBasic.PALETTE(7, 3);
+				_qBasic.PALETTE(7, 63);
 
 				// Display Color
 				// TODO: Determine what "Display Color" means in this context. It may refer to setting the color palette for the display, but without more information, it's unclear.
@@ -311,18 +311,21 @@ namespace Gorillas.Game
 			{
 				for (int a = 1; a <= 5; a++)
 				{
+					// Clear the border cells first: printing a space glyph draws no pixels, so it can't erase a previous star.
+					var topLeft = _qBasic.TranslateRowColToPixel(1, 1);
+					_qBasic.ClearRegion(topLeft.Item1, topLeft.Item2, 80 * _qBasic.CharWidth, _qBasic.CharHeight);
 					_qBasic.LOCATE(1, 1);
 					_qBasic.PRINT(sparkle.Substring(a - 1, 80));
+					var bottomLeft = _qBasic.TranslateRowColToPixel(22, 1);
+					_qBasic.ClearRegion(bottomLeft.Item1, bottomLeft.Item2, 80 * _qBasic.CharWidth, _qBasic.CharHeight);
 					_qBasic.LOCATE(22, 1);
 					_qBasic.PRINT(sparkle.Substring(5 - a, 80));
 
 					for (int b = 2; b <= 21; b++)
 					{
 						bool sparkleOn = (a + b) % 5 == 1;
-						_qBasic.LOCATE(b, 80);
-						_qBasic.PRINT(sparkleOn ? "*" : " ");
-						_qBasic.LOCATE(23 - b, 1);
-						_qBasic.PRINT(sparkleOn ? "*" : " ");
+						DrawSparkleCell(b, 80, sparkleOn);
+						DrawSparkleCell(23 - b, 1, sparkleOn);
 					}
 
 					await Task.Delay(100);
@@ -331,6 +334,17 @@ namespace Gorillas.Game
 						return await keyTask;
 					}
 				}
+			}
+		}
+
+		private void DrawSparkleCell(int row, int column, bool sparkleOn)
+		{
+			var pixel = _qBasic.TranslateRowColToPixel(row, column);
+			_qBasic.ClearRegion(pixel.Item1, pixel.Item2, _qBasic.CharWidth, _qBasic.CharHeight);
+			if (sparkleOn)
+			{
+				_qBasic.LOCATE(row, column);
+				_qBasic.PRINT("*");
 			}
 		}
 

@@ -635,9 +635,10 @@ public unsafe class QBasic
 			return standardColor;
 		}
 
-		int red = ((paletteColor >> 5) & 1) * 2 + ((paletteColor >> 2) & 1);
-		int green = ((paletteColor >> 4) & 1) * 2 + ((paletteColor >> 1) & 1);
-		int blue = ((paletteColor >> 3) & 1) * 2 + (paletteColor & 1);
+		// EGA 6-bit color: bits 0-2 (BGR) are the bright 0xAA component, bits 3-5 the dim 0x55 component.
+		int red = ((paletteColor >> 2) & 1) * 2 + ((paletteColor >> 5) & 1);
+		int green = ((paletteColor >> 1) & 1) * 2 + ((paletteColor >> 4) & 1);
+		int blue = (paletteColor & 1) * 2 + ((paletteColor >> 3) & 1);
 		return ((byte)(red * 85), (byte)(green * 85), (byte)(blue * 85));
 	}
 }
