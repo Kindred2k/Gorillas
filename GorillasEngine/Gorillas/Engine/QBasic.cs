@@ -1,6 +1,5 @@
 using Silk.NET.Input;
 using Silk.NET.OpenAL;
-using System.Runtime.InteropServices;
 
 namespace Gorillas.Engine;
 

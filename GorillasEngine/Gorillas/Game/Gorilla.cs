@@ -1,11 +1,4 @@
 ﻿using Gorillas.Engine;
-using Silk.NET.OpenGL;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Text;
-using static System.Net.Mime.MediaTypeNames;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Gorillas.Game
 {
